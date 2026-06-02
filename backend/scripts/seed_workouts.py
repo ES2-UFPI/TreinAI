@@ -10,6 +10,7 @@ import json
 import re
 from typing import Optional
 
+import ollama
 from bs4 import BeautifulSoup
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 from sqlmodel import Session, select
@@ -19,6 +20,8 @@ from domain import DifficultyLevel, EmbeddingDocument, Exercise, Workout, Workou
 
 BASE_URL = "https://www.muscleandstrength.com"
 TARGET_PER_CATEGORY = 3
+EMBED_MODEL = "qwen3-embedding:4b"
+EMBED_DIM = 768
 CRAWL_DELAY = 2.0
 
 CATEGORY_SLUGS = {
@@ -292,6 +295,91 @@ def save_workout(session: Session, data: dict) -> Optional[Workout]:
     session.commit()
     return workout
 
+# embedding
+
+def build_chunk_text(workout: Workout, links: list[WorkoutExercise], exercise_names: dict[int, str]) -> str:
+    parts = [
+        f"Workout: {workout.title}",
+        f"Goal: {workout.main_goal}",
+        f"Type: {workout.workout_type}",
+        f"Level: {workout.training_level.value}",
+    ]
+    if workout.program_duration_weeks:
+        parts.append(f"Duration: {workout.program_duration_weeks} weeks")
+    if workout.days_per_week:
+        parts.append(f"Frequency: {workout.days_per_week} days/week")
+    if workout.time_per_workout:
+        parts.append(f"Session time: {workout.time_per_workout}")
+    if workout.equipment_required:
+        parts.append(f"Equipment: {workout.equipment_required}")
+    if workout.description:
+        parts.append(f"Description: {workout.description}")
+    if links:
+        parts.append("Exercises:")
+        for link in sorted(links, key=lambda x: x.order):
+            name = exercise_names.get(link.exercise_id, "")
+            line = f"  {link.order}. {name}"
+            if link.sets:
+                line += f" — {link.sets} sets"
+            if link.reps:
+                line += f" x {link.reps} reps"
+            if link.rest_seconds:
+                line += f" ({link.rest_seconds}s rest)"
+            parts.append(line)
+    return "\n".join(parts)
+
+
+def already_embedded_ids(session: Session) -> set[int]:
+    rows = session.exec(
+        select(EmbeddingDocument.metadata_json).where(EmbeddingDocument.content_type == "workout")
+    ).all()
+    ids: set[int] = set()
+    for row in rows:
+        try:
+            data = json.loads(row or "{}")
+            if "workout_id" in data:
+                ids.add(int(data["workout_id"]))
+        except Exception:
+            pass
+    return ids
+
+
+def generate_embeddings(session: Session) -> None:
+    embedded = already_embedded_ids(session)
+    workouts = session.exec(select(Workout)).all()
+
+    for workout in workouts:
+        if workout.id in embedded:
+            continue
+
+        links = session.exec(select(WorkoutExercise).where(WorkoutExercise.workout_id == workout.id)).all()
+        exercise_ids = [link.exercise_id for link in links]
+        exercise_names: dict[int, str] = {}
+        
+        if exercise_ids:
+            exs = session.exec(select(Exercise).where(Exercise.id.in_(exercise_ids))).all()
+            exercise_names = {e.id: e.name for e in exs}
+
+        chunk_text = build_chunk_text(workout, links, exercise_names)
+
+        try:
+            response = ollama.embed(model=EMBED_MODEL, input=chunk_text, dimensions=EMBED_DIM)
+            vector = response["embeddings"][0]
+        except Exception as e:
+            continue
+
+        doc = EmbeddingDocument(
+            title=workout.title,
+            chunk_text=chunk_text,
+            chunk_index=0,
+            content_type="workout",
+            metadata_json=json.dumps({"workout_id": workout.id}),
+            embedding=vector,
+        )
+        session.add(doc)
+        session.commit()
+        
+
 async def main() -> None:
     async with AsyncWebCrawler(config=BrowserConfig(headless=True, verbose=False)) as crawler:
         print("\n[Fase 1] Extraindo dados")
@@ -309,6 +397,11 @@ async def main() -> None:
                         ex_count = len(data.get("exercises") or [])
                         print(f"Salvo: {workout.title!r}, com {ex_count} exercicios)")
                 await asyncio.sleep(CRAWL_DELAY)
+
+    print("\n[Fase 2] Gerando embeddings")
+    with Session(engine) as session:
+        generate_embeddings(session)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
