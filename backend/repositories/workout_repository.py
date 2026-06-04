@@ -7,7 +7,7 @@ class WorkoutRepository:
         self.session = session
 
     def search_similar(
-        self, vector: list[float], n: int = 3, min_similarity: float = 0.55
+        self, vector: list[float], n: int = 3, min_similarity: float = 0.3
     ) -> list[tuple[str, str]]:
         vector_literal = f"[{','.join(str(v) for v in vector)}]"
         sql = text("""
