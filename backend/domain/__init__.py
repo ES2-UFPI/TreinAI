@@ -1,21 +1,21 @@
-from .workout import Workout, DifficultyLevel
 from .auth import InvalidCredentialsError, LoginRequest, LoginResponse
 from .embedding import EmbeddingDocument
 from .exercise import Exercise
-from .workout_exercise import WorkoutExercise
 from .user import User, UserAlreadyExistsError, UserCreate, UserRead
+from .workout import DifficultyLevel, Workout
+from .workout_exercise import WorkoutExercise
 
 __all__ = [
-  "Workout",
   "DifficultyLevel",
+  "EmbeddingDocument",
+  "Exercise",
   "InvalidCredentialsError",
   "LoginRequest",
   "LoginResponse",
-  "EmbeddingDocument",
-  "WorkoutExercise",
-  "Exercise",
   "User",
   "UserAlreadyExistsError",
   "UserCreate",
   "UserRead",
+  "Workout",
+  "WorkoutExercise",
 ]
