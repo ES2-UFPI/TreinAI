@@ -1,0 +1,25 @@
+from sqlmodel import SQLModel
+
+
+class PlannedExercise(SQLModel):
+    order: int
+    name: str
+    sets: int | None = None
+    reps: str | None = None
+    rest_seconds: int | None = None
+    muscle_group: str | None = None
+    notes: str | None = None
+
+
+class WorkoutPlan(SQLModel):
+    title: str
+    description: str = ""
+    main_goal: str
+    workout_type: str
+    training_level: str
+    program_duration_weeks: int | None = None
+    days_per_week: int | None = None
+    time_per_workout: str | None = None
+    equipment_required: str | None = None
+    target_gender: str | None = None
+    exercises: list[PlannedExercise] = []
