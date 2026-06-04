@@ -13,7 +13,7 @@ from typing import Optional
 import ollama
 from bs4 import BeautifulSoup
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from core.database import engine
 from domain import DifficultyLevel, EmbeddingDocument, Exercise, Workout, WorkoutExercise
@@ -297,7 +297,7 @@ def save_workout(session: Session, data: dict) -> Optional[Workout]:
 
 # embedding
 
-def build_chunk_text(workout: Workout, links: list[WorkoutExercise], exercise_names: dict[int, str]) -> str:
+def build_chunk_text(workout: Workout, links: list[WorkoutExercise], exercises: dict[int, Exercise]) -> str:
     parts = [
         f"Workout: {workout.title}",
         f"Goal: {workout.main_goal}",
@@ -312,19 +312,32 @@ def build_chunk_text(workout: Workout, links: list[WorkoutExercise], exercise_na
         parts.append(f"Session time: {workout.time_per_workout}")
     if workout.equipment_required:
         parts.append(f"Equipment: {workout.equipment_required}")
+
+    muscle_groups = sorted({
+        ex.muscle_group
+        for ex in exercises.values()
+        if ex.muscle_group
+    })
+    if muscle_groups:
+        parts.append(f"Muscles targeted: {', '.join(muscle_groups)}")
+
     if workout.description:
         parts.append(f"Description: {workout.description}")
     if links:
         parts.append("Exercises:")
         for link in sorted(links, key=lambda x: x.order):
-            name = exercise_names.get(link.exercise_id, "")
-            line = f"  {link.order}. {name}"
+            ex = exercises.get(link.exercise_id)
+            if not ex:
+                continue
+            line = f"  {link.order}. {ex.name}"
             if link.sets:
                 line += f" — {link.sets} sets"
             if link.reps:
                 line += f" x {link.reps} reps"
             if link.rest_seconds:
                 line += f" ({link.rest_seconds}s rest)"
+            if ex.muscle_group:
+                line += f" | {ex.muscle_group}"
             parts.append(line)
     return "\n".join(parts)
 
@@ -345,22 +358,21 @@ def already_embedded_ids(session: Session) -> set[int]:
 
 
 def generate_embeddings(session: Session) -> None:
-    embedded = already_embedded_ids(session)
+    session.exec(delete(EmbeddingDocument))
+    session.commit()
+
     workouts = session.exec(select(Workout)).all()
 
     for workout in workouts:
-        if workout.id in embedded:
-            continue
-
         links = session.exec(select(WorkoutExercise).where(WorkoutExercise.workout_id == workout.id)).all()
         exercise_ids = [link.exercise_id for link in links]
-        exercise_names: dict[int, str] = {}
-        
+        exercises: dict[int, Exercise] = {}
+
         if exercise_ids:
             exs = session.exec(select(Exercise).where(Exercise.id.in_(exercise_ids))).all()
-            exercise_names = {e.id: e.name for e in exs}
+            exercises = {e.id: e for e in exs}
 
-        chunk_text = build_chunk_text(workout, links, exercise_names)
+        chunk_text = build_chunk_text(workout, links, exercises)
 
         try:
             response = ollama.embed(model=EMBED_MODEL, input=chunk_text, dimensions=EMBED_DIM)
