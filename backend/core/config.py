@@ -9,7 +9,7 @@ class Settings(BaseSettings):
 
     OLLAMA_HOST: str = "https://ollama.com"
     OLLAMA_API_KEY: str = ""
-    LLM_MODEL: str = ""
+    LLM_MODEL: str = "gpt-oss:120b-cloud"
     
     EMBED_MODEL:  str = "qwen3-embedding:4b"
     EMBED_DIM: int = 768
