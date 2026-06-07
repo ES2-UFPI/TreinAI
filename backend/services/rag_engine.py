@@ -5,12 +5,11 @@
 
 import ollama
 
-from core.database import get_session
-from domain.embedding import EMBEDDING_DIM
+from core.config import settings
 from repositories.workout_repository import WorkoutRepository
 
-EMBED_MODEL = "qwen3-embedding:4b"
-
+EMBED_MODEL = settings.EMBED_MODEL
+EMBEDDING_DIM = settings.EMBED_DIM
 
 class RAGEngine:
     def __init__(self, workout_repository: WorkoutRepository) -> None:

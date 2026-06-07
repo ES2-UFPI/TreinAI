@@ -16,12 +16,13 @@ from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 from sqlmodel import Session, delete, select
 
 from core.database import engine
+from core.config import settings
 from domain import DifficultyLevel, EmbeddingDocument, Exercise, Workout, WorkoutExercise
 
 BASE_URL = "https://www.muscleandstrength.com"
 TARGET_PER_CATEGORY = 3
-EMBED_MODEL = "qwen3-embedding:4b"
-EMBED_DIM = 768
+EMBED_MODEL = settings.EMBED_MODEL
+EMBED_DIM = settings.EMBED_DIM
 CRAWL_DELAY = 2.0
 
 CATEGORY_SLUGS = {
