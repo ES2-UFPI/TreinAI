@@ -31,3 +31,7 @@ class UserRead(UserBase):
 class UserAlreadyExistsError(Exception):
   def __init__(self, email: str) -> None:
     super().__init__(f"User with email '{email}' already exists.")
+
+class UserNotFoundError(Exception):
+  def __init__(self) -> None:
+    super().__init__(f"User not found")
