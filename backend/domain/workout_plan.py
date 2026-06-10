@@ -1,5 +1,9 @@
 from sqlmodel import SQLModel
 
+class WorkoutRequest(SQLModel):
+    user_id: int
+    query: str
+
 
 class PlannedExercise(SQLModel):
     order: int
