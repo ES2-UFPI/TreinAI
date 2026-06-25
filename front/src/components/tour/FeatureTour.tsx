@@ -10,6 +10,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -90,8 +91,8 @@ export function TourProvider({ steps, children, onFinish }: TourProviderProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [rect, setRect] = useState<ElementRect | null>(null);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const popoverAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const popoverAnim = useMemo(() => new Animated.Value(0), []);
 
   const registerRef = useCallback(
     (id: string, ref: React.RefObject<View | null>) => {
@@ -426,7 +427,6 @@ function computePopoverPosition(
 // ─── Estilos ─────────────────────────────────────────────────────────────────
 
 const GREEN = "#1D9E75";
-const GREEN_LIGHT = "#E1F5EE";
 
 const styles = StyleSheet.create({
   darkRect: {
