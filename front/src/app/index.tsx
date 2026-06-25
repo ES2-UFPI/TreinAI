@@ -48,7 +48,7 @@ function DashboardContent() {
         <Text style={styles.cardTitle}>Gerar treino com IA</Text>
         <View style={styles.inputMock}>
           <Text style={styles.inputText}>
-            Ex: "Quero emagrecer, treino em casa, 3x por semana"
+            Ex: &quot;Quero emagrecer, treino em casa, 3x por semana&quot;
           </Text>
         </View>
         <Pressable style={styles.btnGreen}>
