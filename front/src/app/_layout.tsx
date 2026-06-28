@@ -17,7 +17,7 @@ export default function RootLayout() {
     getToken()
       .then((token) => router.replace(token ? '/profile' : '/login'))
       .finally(() => SplashScreen.hideAsync())
-  }, [fontsLoaded])
+  }, [fontsLoaded, router])
 
   return (
     <>

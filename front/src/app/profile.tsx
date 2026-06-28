@@ -49,28 +49,23 @@ export default function ProfileScreen() {
   const set = (key: string) => (value: string) => setForm({ ...form, [key]: value })
 
   useEffect(() => {
-    loadProfile()
-  }, [])
-
-  async function loadProfile() {
-    setLoading(true)
-    try {
-      const data = await getMe()
-      setUser(data)
-      setForm({
-        idade: data.idade ? String(data.idade) : '',
-        peso: data.peso ? String(data.peso) : '',
-        altura: data.altura ? String(data.altura) : '',
-        objetivo: data.objetivo || '',
-        nivel: data.nivel || '',
+    getMe()
+      .then((data) => {
+        setUser(data)
+        setForm({
+          idade: data.idade ? String(data.idade) : '',
+          peso: data.peso ? String(data.peso) : '',
+          altura: data.altura ? String(data.altura) : '',
+          objetivo: data.objetivo || '',
+          nivel: data.nivel || '',
+        })
       })
-    } catch {
-      await clearToken()
-      router.replace('/login')
-    } finally {
-      setLoading(false)
-    }
-  }
+      .catch(async () => {
+        await clearToken()
+        router.replace('/login')
+      })
+      .finally(() => setLoading(false))
+  }, [router])
 
   async function handleLogout() {
     await clearToken()
