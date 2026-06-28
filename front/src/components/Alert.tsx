@@ -1,9 +1,9 @@
 import React from 'react'
 import { StyleSheet, Text } from 'react-native'
 
-import { colors, radius } from '../styles/theme'
+import { colors, radius } from '@/styles/theme'
 
-export default function Alert({ type = 'error', message }) {
+export default function Alert({ type = 'error', message }: { type?: 'error' | 'success'; message?: string }) {
   if (!message) return null
 
   return (

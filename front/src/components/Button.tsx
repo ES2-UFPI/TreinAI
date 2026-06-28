@@ -1,10 +1,17 @@
 import React from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native'
+import { ActivityIndicator, Pressable, PressableProps, StyleSheet, Text, ViewStyle } from 'react-native'
 
-import { colors, radius } from '../styles/theme'
+import { colors, radius } from '@/styles/theme'
 
-export default function Button({ children, loading, variant = 'primary', style, ...props }) {
-  const disabled = loading || props.disabled
+interface ButtonProps extends PressableProps {
+  children: React.ReactNode
+  loading?: boolean
+  variant?: 'primary' | 'secondary'
+  style?: ViewStyle
+}
+
+export default function Button({ children, loading, variant = 'primary', style, ...props }: ButtonProps) {
+  const disabled = loading || !!props.disabled
 
   return (
     <Pressable

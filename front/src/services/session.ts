@@ -17,7 +17,7 @@ export async function getToken() {
   return SecureStore.getItemAsync(TOKEN_KEY)
 }
 
-export async function setToken(token) {
+export async function setToken(token: string) {
   const storage = getStorage()
   if (storage) {
     storage.setItem(TOKEN_KEY, token)

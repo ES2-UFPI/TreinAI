@@ -7,14 +7,15 @@ import {
   Text,
   View,
 } from 'react-native'
+import { useRouter } from 'expo-router'
 
-import Alert from '../components/Alert'
-import Button from '../components/Button'
-import Input from '../components/Input'
-import OptionSelect from '../components/OptionSelect'
-import { getMe, updateProfile } from '../services/api'
-import { clearToken } from '../services/session'
-import { colors, radius } from '../styles/theme'
+import Alert from '@/components/Alert'
+import Button from '@/components/Button'
+import Input from '@/components/Input'
+import OptionSelect from '@/components/OptionSelect'
+import { getMe, updateProfile } from '@/services/api'
+import { clearToken } from '@/services/session'
+import { colors, radius } from '@/styles/theme'
 
 const goals = [
   { label: 'Emagrecer', value: 'emagrecer' },
@@ -30,21 +31,22 @@ const levels = [
   { label: 'Avançado', value: 'avancado' },
 ]
 
-const levelLabels = {
+const levelLabels: Record<string, string> = {
   iniciante: 'iniciante',
   intermediario: 'intermediário',
   avancado: 'avançado',
 }
 
-export default function ProfileScreen({ onLogout, onUnauthorized }) {
-  const [user, setUser] = useState(null)
+export default function ProfileScreen() {
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
   const [form, setForm] = useState({ idade: '', peso: '', altura: '', objetivo: '', nivel: '' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  const set = (key) => (value) => setForm({ ...form, [key]: value })
+  const set = (key: string) => (value: string) => setForm({ ...form, [key]: value })
 
   useEffect(() => {
     loadProfile()
@@ -64,7 +66,7 @@ export default function ProfileScreen({ onLogout, onUnauthorized }) {
       })
     } catch {
       await clearToken()
-      onUnauthorized()
+      router.replace('/login')
     } finally {
       setLoading(false)
     }
@@ -72,7 +74,7 @@ export default function ProfileScreen({ onLogout, onUnauthorized }) {
 
   async function handleLogout() {
     await clearToken()
-    onLogout()
+    router.replace('/login')
   }
 
   async function handleSubmit() {
@@ -97,7 +99,7 @@ export default function ProfileScreen({ onLogout, onUnauthorized }) {
       const data = await updateProfile(payload)
       setUser(data)
       setSuccess('Perfil atualizado com sucesso!')
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || 'Erro ao atualizar perfil.')
     } finally {
       setSaving(false)
@@ -164,7 +166,7 @@ export default function ProfileScreen({ onLogout, onUnauthorized }) {
   )
 }
 
-function Stat({ value, unit, label, badge }) {
+function Stat({ value, unit, label, badge }: { value: any; unit?: string; label: string; badge?: boolean }) {
   return (
     <View style={styles.stat}>
       <Text style={[styles.statValue, badge && styles.statBadge]}>

@@ -8,9 +8,13 @@ import {
   View,
 } from 'react-native'
 
-import { colors } from '../styles/theme'
+import { colors } from '@/styles/theme'
 
-export default function AuthLayout({ title, subtitle, children }) {
+export default function AuthLayout({ title, subtitle, children }: {
+  title: string
+  subtitle?: string
+  children: React.ReactNode
+}) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
