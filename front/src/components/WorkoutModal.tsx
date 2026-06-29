@@ -8,9 +8,15 @@ import {
 } from 'react-native'
 
 import { colors, radius } from '@/styles/theme'
-import type { Exercise, WorkoutPlan } from '@/domain/workout'
+import type { Exercise, WorkoutDay, WorkoutPlan } from '@/domain/workout'
 
 export type { WorkoutPlan }
+
+const LEVEL_LABEL: Record<string, string> = {
+  beginner:     'Iniciante',
+  intermediate: 'Intermediário',
+  advanced:     'Avançado',
+}
 
 interface WorkoutModalProps {
   plan: WorkoutPlan
@@ -32,7 +38,7 @@ export default function WorkoutModal({ plan, visible, onClose, onSaveToHistory }
             <Header plan={plan} onClose={onClose} />
             <Tags plan={plan} />
             <StatsGrid plan={plan} />
-            <ExercisesList exercises={plan.exercises} />
+            <DaysList days={plan.days} />
             <SaveButton onPress={() => onSaveToHistory?.(plan)} />
           </ScrollView>
         </Pressable>
@@ -63,7 +69,7 @@ function Tags({ plan }: { plan: WorkoutPlan }) {
     plan.workout_type,
     plan.target_gender,
     plan.equipment_required,
-  ].filter(Boolean)
+  ].filter((t): t is string => !!t)
 
   return (
     <View style={styles.tagsRow}>
@@ -75,7 +81,7 @@ function Tags({ plan }: { plan: WorkoutPlan }) {
       {!!plan.training_level && (
         <View style={[styles.tag, styles.tagAccent]}>
           <Text style={[styles.tagText, styles.tagAccentText]}>
-            {plan.training_level.toUpperCase()}
+            {(LEVEL_LABEL[plan.training_level] ?? plan.training_level).toUpperCase()}
           </Text>
         </View>
       )}
@@ -93,7 +99,8 @@ function StatsGrid({ plan }: { plan: WorkoutPlan }) {
   )
 }
 
-function StatCard({ value, label, unit }: { value: string | number; label: string; unit?: string }) {
+function StatCard({ value, label, unit }: { value: string | number | null | undefined; label: string; unit?: string }) {
+  if (value == null) return null
   return (
     <View style={styles.statCard}>
       <Text style={styles.statValue}>
@@ -105,19 +112,32 @@ function StatCard({ value, label, unit }: { value: string | number; label: strin
   )
 }
 
-function ExercisesList({ exercises }: { exercises: Exercise[] }) {
+function DaysList({ days }: { days: WorkoutDay[] }) {
+  if (!days?.length) {
+    return (
+      <View style={styles.exercisesSection}>
+        <Text style={styles.emptyState}>Nenhum treino disponível.</Text>
+      </View>
+    )
+  }
+
   return (
     <View style={styles.exercisesSection}>
-      <Text style={styles.sectionTitle}>Exercícios</Text>
-      {!exercises?.length ? (
-        <Text style={styles.emptyState}>Nenhum exercício disponível.</Text>
-      ) : (
-        <View style={styles.exercisesList}>
-          {exercises.map((ex, i) => (
-            <ExerciseCard key={i} exercise={ex} index={i} />
-          ))}
+      {days.map((d) => (
+        <View key={d.day} style={styles.dayBlock}>
+          <View style={styles.dayHeader}>
+            <View style={styles.dayBadge}>
+              <Text style={styles.dayBadgeText}>DIA {d.day}</Text>
+            </View>
+            <Text style={styles.dayFocus}>{d.focus}</Text>
+          </View>
+          <View style={styles.exercisesList}>
+            {d.exercises.map((ex, i) => (
+              <ExerciseCard key={i} exercise={ex} index={i} />
+            ))}
+          </View>
         </View>
-      )}
+      ))}
     </View>
   )
 }
@@ -138,6 +158,7 @@ function ExerciseCard({ exercise, index }: { exercise: Exercise; index: number }
 
       <View style={styles.exerciseMetrics}>
         <Metric value={exercise.sets} label="Séries" />
+        <Text style={styles.metricSeparator}>×</Text>
         <Metric value={exercise.reps} label="Reps" />
       </View>
     </View>
@@ -291,13 +312,33 @@ const styles = StyleSheet.create({
   },
 
   exercisesSection: {
-    gap: 14,
+    gap: 20,
   },
-  sectionTitle: {
-    color: colors.text,
-    fontSize: 16,
+  dayBlock: {
+    gap: 10,
+  },
+  dayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dayBadge: {
+    backgroundColor: colors.accent,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  dayBadgeText: {
+    color: colors.bg,
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+  },
+  dayFocus: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
   },
   emptyState: {
     color: colors.textDim,
@@ -362,6 +403,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '500',
     letterSpacing: 0.5,
+  },
+  metricSeparator: {
+    color: colors.textDim,
+    fontSize: 16,
+    fontWeight: '300',
+    alignSelf: 'center',
+    marginBottom: 10,
   },
   saveBtn: {
     backgroundColor: colors.accent,
