@@ -15,7 +15,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (!fontsLoaded) return
     getToken()
-      .then((token) => router.replace(token ? '/profile' : '/login'))
+      .then((token) => router.replace(token ? '/' : '/login'))
       .finally(() => SplashScreen.hideAsync())
   }, [fontsLoaded, router])
 
@@ -27,6 +27,7 @@ export default function RootLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
         <Stack.Screen name="profile" />
+        <Stack.Screen name="workout/[id]" />
       </Stack>
     </>
   )
