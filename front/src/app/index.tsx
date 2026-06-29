@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -6,7 +6,9 @@ import {
   Text,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 
+import WorkoutHistoryList from "@/components/WorkoutHistoryList";
 import {
   TourProvider,
   useTour,
@@ -18,6 +20,8 @@ import {
   resetTourSeen,
   useTourAutoStart,
 } from "@/components/tour/useTourAutoStart";
+import { getWorkoutHistory } from "@/services/api";
+import { getUserId, getUserName } from "@/services/session";
 
 export default function DashboardScreen() {
   return (
@@ -29,6 +33,7 @@ export default function DashboardScreen() {
 
 function DashboardContent() {
   useTourAutoStart(600);
+  const router = useRouter();
 
   const refGen = useTourRef("gen-workout");
   const refWorkouts = useTourRef("nav-workouts");
@@ -39,9 +44,39 @@ function DashboardContent() {
 
   const { startTour } = useTour();
 
+  const [userName, setUserName] = useState("");
+  const [workouts, setWorkouts] = useState<{ id: number; title: string }[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadHistory() {
+      const userId = await getUserId();
+      const name = await getUserName();
+      if (name) setUserName(name);
+
+      if (!userId) {
+        setHistoryLoading(false);
+        return;
+      }
+
+      try {
+        const data = await getWorkoutHistory(Number(userId));
+        setWorkouts(data.map((item) => ({ id: item.id, title: item.title })));
+      } catch {
+        setWorkouts([]);
+      } finally {
+        setHistoryLoading(false);
+      }
+    }
+
+    loadHistory();
+  }, []);
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.greeting}>Olá, João 👋</Text>
+      <Text style={styles.greeting}>
+        Olá{userName ? `, ${userName.split(" ")[0]}` : ""} 👋
+      </Text>
       <Text style={styles.subtitle}>Pronto para treinar hoje?</Text>
 
       <View ref={refGen} style={styles.card}>
@@ -74,10 +109,12 @@ function DashboardContent() {
         <StatCard value="Interm." label="Seu nível" />
       </View>
 
-      <View ref={refHistory} style={styles.card}>
-        <Text style={styles.cardTitle}>Últimos treinos</Text>
-        <HistoryItem icon="🏃" name="Treino HIIT – Segunda" />
-        <HistoryItem icon="🏋️" name="Força membros – Quarta" />
+      <View ref={refHistory}>
+        <WorkoutHistoryList
+          workouts={workouts}
+          loading={historyLoading}
+          onItemPress={(id) => router.push(`/workout/${id}`)}
+        />
       </View>
 
       <Pressable
@@ -98,18 +135,6 @@ function StatCard({ value, label }: { value: string; label: string }) {
     <View style={styles.statCard}>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function HistoryItem({ icon, name }: { icon: string; name: string }) {
-  return (
-    <View style={styles.historyItem}>
-      <Text style={styles.historyIcon}>{icon}</Text>
-      <Text style={styles.historyName}>{name}</Text>
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>Concluído</Text>
-      </View>
     </View>
   );
 }
@@ -174,24 +199,6 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: 18, fontWeight: "600", color: "#111" },
   statLabel: { fontSize: 10, color: "#888", marginTop: 2, textAlign: "center" },
-
-  historyItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 6,
-    borderTopWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.06)",
-  },
-  historyIcon: { fontSize: 14 },
-  historyName: { flex: 1, fontSize: 13, color: "#444" },
-  badge: {
-    backgroundColor: "#E1F5EE",
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  badgeText: { fontSize: 10, color: GREEN, fontWeight: "600" },
 
   btnOutline: {
     borderWidth: 0.5,
