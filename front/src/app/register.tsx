@@ -1,13 +1,14 @@
 import React, { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { useRouter } from 'expo-router'
 
-import Alert from '../components/Alert'
-import AuthLayout from '../components/AuthLayout'
-import Button from '../components/Button'
-import Input from '../components/Input'
-import OptionSelect from '../components/OptionSelect'
-import { registerUser } from '../services/api'
-import { colors } from '../styles/theme'
+import Alert from '@/components/Alert'
+import AuthLayout from '@/components/AuthLayout'
+import Button from '@/components/Button'
+import Input from '@/components/Input'
+import OptionSelect from '@/components/OptionSelect'
+import { registerUser } from '@/services/api'
+import { colors } from '@/styles/theme'
 
 const goals = [
   { label: 'Emagrecer', value: 'emagrecer' },
@@ -23,7 +24,8 @@ const levels = [
   { label: 'Avançado', value: 'avancado' },
 ]
 
-export default function RegisterScreen({ onLogin, onRegistered }) {
+export default function RegisterScreen() {
+  const router = useRouter()
   const [form, setForm] = useState({
     nome: '',
     email: '',
@@ -38,7 +40,7 @@ export default function RegisterScreen({ onLogin, onRegistered }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  const set = (key) => (value) => setForm({ ...form, [key]: value })
+  const set = (key: string) => (value: string) => setForm({ ...form, [key]: value })
 
   async function handleSubmit() {
     setError('')
@@ -70,8 +72,8 @@ export default function RegisterScreen({ onLogin, onRegistered }) {
     try {
       await registerUser(payload)
       setSuccess('Cadastro realizado com sucesso! Redirecionando...')
-      setTimeout(onRegistered, 1000)
-    } catch (err) {
+      setTimeout(() => router.replace('/login'), 1000)
+    } catch (err: any) {
       setError(err.message || 'Erro ao cadastrar. Tente novamente.')
     } finally {
       setLoading(false)
@@ -95,7 +97,7 @@ export default function RegisterScreen({ onLogin, onRegistered }) {
       <Button loading={loading} onPress={handleSubmit}>Criar conta</Button>
       <View style={styles.footer}>
         <Text style={styles.footerText}>Já tem conta? </Text>
-        <Pressable onPress={onLogin}>
+        <Pressable onPress={() => router.replace('/login')}>
           <Text style={styles.link}>Entrar</Text>
         </Pressable>
       </View>

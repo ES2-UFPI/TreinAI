@@ -1,9 +1,15 @@
 import React, { useState } from 'react'
-import { StyleSheet, Text, TextInput, View } from 'react-native'
+import { StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle } from 'react-native'
 
-import { colors, radius } from '../styles/theme'
+import { colors, radius } from '@/styles/theme'
 
-export default function Input({ label, error, style, ...props }) {
+interface InputProps extends TextInputProps {
+  label?: string
+  error?: string
+  style?: ViewStyle
+}
+
+export default function Input({ label, error, style, ...props }: InputProps) {
   const [focused, setFocused] = useState(false)
 
   return (

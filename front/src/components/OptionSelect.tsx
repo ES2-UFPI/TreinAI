@@ -1,9 +1,19 @@
 import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
-import { colors, radius } from '../styles/theme'
+import { colors, radius } from '@/styles/theme'
 
-export default function OptionSelect({ label, options, value, onChange }) {
+interface Option {
+  label: string
+  value: string
+}
+
+export default function OptionSelect({ label, options, value, onChange }: {
+  label: string
+  options: Option[]
+  value: string
+  onChange: (value: string) => void
+}) {
   return (
     <View style={styles.group}>
       <Text style={styles.label}>{label}</Text>

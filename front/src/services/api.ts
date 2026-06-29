@@ -1,20 +1,20 @@
-import { getToken } from './session'
+import { getToken } from '@/services/session'
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://127.0.0.1:8000'
 
-const levelToBackend = {
+const levelToBackend: Record<string, string> = {
   iniciante: 'beginner',
   intermediario: 'intermediate',
   avancado: 'advanced',
 }
 
-const levelFromBackend = {
+const levelFromBackend: Record<string, string> = {
   beginner: 'iniciante',
   intermediate: 'intermediario',
   advanced: 'avancado',
 }
 
-function normalizeUser(user) {
+function normalizeUser(user: any) {
   if (!user) return user
   const level = user.nivel || user.level || ''
 
@@ -30,7 +30,7 @@ function normalizeUser(user) {
   }
 }
 
-function toRegisterPayload(data) {
+function toRegisterPayload(data: any) {
   return {
     name: data.nome,
     email: data.email,
@@ -43,7 +43,7 @@ function toRegisterPayload(data) {
   }
 }
 
-function toProfilePayload(data) {
+function toProfilePayload(data: any) {
   return {
     age: data.idade,
     weight: data.peso,
@@ -53,14 +53,14 @@ function toProfilePayload(data) {
   }
 }
 
-async function request(path, options = {}) {
+async function request(path: string, options: RequestInit = {}) {
   const token = await getToken()
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
+      ...(options.headers as Record<string, string> || {}),
     },
   })
 
@@ -73,14 +73,14 @@ async function request(path, options = {}) {
   return data
 }
 
-export async function loginUser(data) {
+export async function loginUser(data: any) {
   return request('/login', {
     method: 'POST',
     body: JSON.stringify({ email: data.email, password: data.senha }),
   })
 }
 
-export async function registerUser(data) {
+export async function registerUser(data: any) {
   const response = await request('/users', {
     method: 'POST',
     body: JSON.stringify(toRegisterPayload(data)),
@@ -93,7 +93,7 @@ export async function getMe() {
   return normalizeUser(await request('/users/me'))
 }
 
-export async function updateProfile(data) {
+export async function updateProfile(data: any) {
   const response = await request('/users/me', {
     method: 'PATCH',
     body: JSON.stringify(toProfilePayload(data)),
