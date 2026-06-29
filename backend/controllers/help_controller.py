@@ -1,10 +1,10 @@
 from fastapi import APIRouter
-from typing import List, Dict
 
-router = APIRouter()
+router = APIRouter(prefix="/help", tags=["help"])
 
-@router.get("/help", response_model=Dict[str, List[str]])
-def get_help():
+
+@router.get("", response_model=dict[str, list[str]])
+def get_help() -> dict[str, list[str]]:
     """
     Endpoint simples que retorna um pequeno tutorial e dicas gerais.
     Troque o conteúdo estático por leitura do banco se quiser conteúdo dinâmico.
