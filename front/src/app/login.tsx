@@ -7,7 +7,7 @@ import AuthLayout from '@/components/AuthLayout'
 import Button from '@/components/Button'
 import Input from '@/components/Input'
 import { loginUser } from '@/services/api'
-import { setToken } from '@/services/session'
+import { setToken, setUserId, setUserName } from '@/services/session'
 import { colors } from '@/styles/theme'
 
 export default function LoginScreen() {
@@ -29,8 +29,10 @@ export default function LoginScreen() {
     setLoading(true)
     try {
       const data = await loginUser(form)
-      await setToken(data.access_token)
-      router.replace('/profile')
+      await setUserId(String(data.user.id))
+      await setUserName(data.user.name || '')
+      await setToken('active')
+      router.replace('/')
     } catch (err: any) {
       setError(err.message || 'Email ou senha inválidos.')
     } finally {

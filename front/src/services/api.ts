@@ -101,3 +101,13 @@ export async function updateProfile(data: any) {
 
   return normalizeUser(response)
 }
+
+export type WorkoutHistoryItem = {
+  id: number
+  title: string
+  created_at: string
+}
+
+export async function getWorkoutHistory(userId: number): Promise<WorkoutHistoryItem[]> {
+  return request(`/workouts/history?user_id=${userId}`)
+}
