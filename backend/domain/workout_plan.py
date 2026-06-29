@@ -15,6 +15,12 @@ class PlannedExercise(SQLModel):
     notes: str | None = None
 
 
+class WorkoutDay(SQLModel):
+    day: int
+    focus: str
+    exercises: list[PlannedExercise] = []
+
+
 class WorkoutPlan(SQLModel):
     title: str
     description: str = ""
@@ -26,4 +32,4 @@ class WorkoutPlan(SQLModel):
     time_per_workout: str | None = None
     equipment_required: str | None = None
     target_gender: str | None = None
-    exercises: list[PlannedExercise] = []
+    days: list[WorkoutDay] = []
