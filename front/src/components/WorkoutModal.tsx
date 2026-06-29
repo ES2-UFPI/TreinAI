@@ -16,9 +16,10 @@ interface WorkoutModalProps {
   plan: WorkoutPlan
   visible: boolean
   onClose: () => void
+  onSaveToHistory?: (plan: WorkoutPlan) => void
 }
 
-export default function WorkoutModal({ plan, visible, onClose }: WorkoutModalProps) {
+export default function WorkoutModal({ plan, visible, onClose, onSaveToHistory }: WorkoutModalProps) {
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
@@ -32,6 +33,7 @@ export default function WorkoutModal({ plan, visible, onClose }: WorkoutModalPro
             <Tags plan={plan} />
             <StatsGrid plan={plan} />
             <ExercisesList exercises={plan.exercises} />
+            <SaveButton onPress={() => onSaveToHistory?.(plan)} />
           </ScrollView>
         </Pressable>
       </Pressable>
@@ -148,6 +150,14 @@ function Metric({ value, label }: { value: string | number; label: string }) {
       <Text style={styles.metricValue}>{String(value)}</Text>
       <Text style={styles.metricLabel}>{label}</Text>
     </View>
+  )
+}
+
+function SaveButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable style={({ pressed }) => [styles.saveBtn, pressed && styles.saveBtnPressed]} onPress={onPress}>
+      <Text style={styles.saveBtnText}>Salvar treino</Text>
+    </Pressable>
   )
 }
 
@@ -352,5 +362,22 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '500',
     letterSpacing: 0.5,
+  },
+  saveBtn: {
+    backgroundColor: colors.accent,
+    borderRadius: radius,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  saveBtnPressed: {
+    backgroundColor: colors.accentHover,
+    transform: [{ translateY: -1 }],
+  },
+  saveBtnText: {
+    color: colors.bg,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
   },
 })
