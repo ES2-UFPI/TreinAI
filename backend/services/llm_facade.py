@@ -3,14 +3,24 @@ import re
 
 from ollama import Client
 
-from repositories.workout_repository import WorkoutRepository
-from core.database import get_session
 from core.config import settings
 from domain.user import User
-from domain.workout import DifficultyLevel
 from domain.workout_plan import WorkoutPlan
 from services.rag_engine import RAGEngine
 from services.workout_factory import WorkoutFactory
+
+_EXERCISE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "name":         {"type": "string"},
+        "sets":         {"type": "integer"},
+        "reps":         {"type": "string"},
+        "rest_seconds": {"type": "integer"},
+        "muscle_group": {"type": "string"},
+        "notes":        {"type": "string"},
+    },
+    "required": ["name", "sets", "reps"],
+}
 
 _RESPONSE_SCHEMA = {
     "type": "object",
@@ -25,23 +35,20 @@ _RESPONSE_SCHEMA = {
         "time_per_workout":       {"type": "string"},
         "equipment_required":     {"type": "string"},
         "target_gender":          {"type": "string"},
-        "exercises": {
+        "days": {
             "type": "array",
             "items": {
                 "type": "object",
                 "properties": {
-                    "name":         {"type": "string"},
-                    "sets":         {"type": "integer"},
-                    "reps":         {"type": "string"},
-                    "rest_seconds": {"type": "integer"},
-                    "muscle_group": {"type": "string"},
-                    "notes":        {"type": "string"},
+                    "day":       {"type": "integer"},
+                    "focus":     {"type": "string"},
+                    "exercises": {"type": "array", "items": _EXERCISE_SCHEMA},
                 },
-                "required": ["name", "sets", "reps"],
+                "required": ["day", "focus", "exercises"],
             },
         },
     },
-    "required": ["title", "main_goal", "workout_type", "training_level", "exercises"],
+    "required": ["title", "main_goal", "workout_type", "training_level", "days"],
 }
 
 
@@ -77,6 +84,13 @@ class LLMFacade:
             "Based on the user profile and reference workouts, create a tailored workout plan. "
             "Adapt intensity and exercises to the user's level and goal. "
             "Always answer in pt-BR, translate everything.\n\n"
+            "STRICT RULES FOR THE days ARRAY:\n"
+            "- Split the plan into one entry per training day. Each entry must have 'day' (integer), "
+            "'focus' (muscle group or session theme, e.g. 'Peito e Tríceps'), and 'exercises' (array).\n"
+            "- The number of day entries must equal days_per_week.\n"
+            "- The 'reps' field must be compact: use only numbers or ranges (e.g. '12', '8-10'). "
+            "For time-based exercises use 'Xs' for seconds or 'Xmin' for minutes (e.g. '30s', '2min'). "
+            "Never write out words like 'repetições', 'segundos', 'minutos'.\n\n"
             "Respond ONLY with a valid JSON object matching this schema (no markdown, no explanation):\n"
             f"{schema_str}"
         )
