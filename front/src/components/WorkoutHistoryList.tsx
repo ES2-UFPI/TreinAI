@@ -7,6 +7,8 @@ import {
   View,
 } from "react-native";
 
+import { colors } from "@/styles/theme";
+
 export type WorkoutHistoryEntry = {
   id: number;
   title: string;
@@ -29,7 +31,7 @@ export default function WorkoutHistoryList({
 
       {loading && (
         <View style={styles.centered}>
-          <ActivityIndicator color={GREEN} />
+          <ActivityIndicator color={colors.accent} />
         </View>
       )}
 
@@ -63,36 +65,36 @@ function HistoryItem({ name }: { name: string }) {
   );
 }
 
-const GREEN = "#1D9E75";
-
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
+    width: "100%",
+    maxWidth: 480,
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 16,
     gap: 10,
-    borderWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.08)",
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  cardTitle: { fontSize: 14, fontWeight: "600", color: "#222" },
+  cardTitle: { fontSize: 14, fontWeight: "600", color: colors.text },
   centered: { paddingVertical: 12, alignItems: "center" },
-  empty: { fontSize: 13, color: "#999", paddingVertical: 4 },
+  empty: { fontSize: 13, color: colors.textDim, paddingVertical: 4 },
   historyItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingVertical: 6,
-    borderTopWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.06)",
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderColor: colors.border,
   },
   historyIcon: { fontSize: 14 },
-  historyName: { flex: 1, fontSize: 13, color: "#444" },
+  historyName: { flex: 1, fontSize: 13, color: colors.text },
   badge: {
-    backgroundColor: "#E1F5EE",
+    backgroundColor: colors.accentDim,
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  badgeText: { fontSize: 10, color: GREEN, fontWeight: "600" },
+  badgeText: { fontSize: 10, color: colors.accent, fontWeight: "600" },
   itemPressed: { opacity: 0.7 },
 });

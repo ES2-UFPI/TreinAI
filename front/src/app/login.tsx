@@ -6,8 +6,8 @@ import Alert from '@/components/Alert'
 import AuthLayout from '@/components/AuthLayout'
 import Button from '@/components/Button'
 import Input from '@/components/Input'
-import { loginUser } from '@/services/api'
-import { setToken, setUserId, setUserName } from '@/services/session'
+import { loginUser, levelFromBackend } from '@/services/api'
+import { setToken, setUserId, setUserLevel, setUserName, setUserProfile } from '@/services/session'
 import { colors } from '@/styles/theme'
 
 export default function LoginScreen() {
@@ -29,8 +29,22 @@ export default function LoginScreen() {
     setLoading(true)
     try {
       const data = await loginUser(form)
-      await setUserId(String(data.user.id))
-      await setUserName(data.user.name || '')
+      const user = data.user
+      const nivelPt = levelFromBackend[user.level] || user.level || ''
+
+      await setUserId(String(user.id))
+      await setUserName(user.name || '')
+      await setUserLevel(user.level || '')
+      await setUserProfile({
+        id: String(user.id),
+        nome: user.name || '',
+        email: user.email || '',
+        idade: user.age != null ? String(user.age) : '',
+        peso: user.weight != null ? String(user.weight) : '',
+        altura: user.height != null ? String(user.height) : '',
+        objetivo: user.goal || '',
+        nivel: nivelPt,
+      })
       await setToken('active')
       router.replace('/')
     } catch (err: any) {

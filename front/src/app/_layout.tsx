@@ -26,6 +26,8 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
+        <Stack.Screen name="workouts" />
+        <Stack.Screen name="help" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="workout/[id]" />
       </Stack>

@@ -1,20 +1,28 @@
 import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Alert from '@/components/Alert'
+import BottomNav from '@/components/BottomNav'
 import Button from '@/components/Button'
 import Input from '@/components/Input'
 import OptionSelect from '@/components/OptionSelect'
-import { getMe, updateProfile } from '@/services/api'
-import { clearToken } from '@/services/session'
+import { getMe, levelToBackend, updateProfile } from '@/services/api'
+import {
+  clearToken,
+  getToken,
+  getUserProfile,
+  setUserLevel,
+  setUserProfile,
+  type StoredUserProfile,
+} from '@/services/session'
 import { colors, radius } from '@/styles/theme'
 
 const goals = [
@@ -39,6 +47,7 @@ const levelLabels: Record<string, string> = {
 
 export default function ProfileScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const [user, setUser] = useState<any>(null)
   const [form, setForm] = useState({ idade: '', peso: '', altura: '', objetivo: '', nivel: '' })
   const [loading, setLoading] = useState(true)
@@ -48,23 +57,52 @@ export default function ProfileScreen() {
 
   const set = (key: string) => (value: string) => setForm({ ...form, [key]: value })
 
+  function applyProfile(profile: StoredUserProfile) {
+    setUser(profile)
+    setForm({
+      idade: profile.idade || '',
+      peso: profile.peso || '',
+      altura: profile.altura || '',
+      objetivo: profile.objetivo || '',
+      nivel: profile.nivel || '',
+    })
+  }
+
   useEffect(() => {
-    getMe()
-      .then((data) => {
-        setUser(data)
-        setForm({
-          idade: data.idade ? String(data.idade) : '',
-          peso: data.peso ? String(data.peso) : '',
-          altura: data.altura ? String(data.altura) : '',
-          objetivo: data.objetivo || '',
-          nivel: data.nivel || '',
-        })
-      })
-      .catch(async () => {
-        await clearToken()
+    async function load() {
+      const token = await getToken()
+      if (!token) {
         router.replace('/login')
-      })
-      .finally(() => setLoading(false))
+        return
+      }
+
+      const stored = await getUserProfile()
+      if (stored) {
+        applyProfile(stored)
+      }
+
+      try {
+        const data = await getMe()
+        applyProfile({
+          id: String(data.id),
+          nome: data.nome || stored?.nome || '',
+          email: data.email || stored?.email || '',
+          idade: data.idade != null ? String(data.idade) : stored?.idade || '',
+          peso: data.peso != null ? String(data.peso) : stored?.peso || '',
+          altura: data.altura != null ? String(data.altura) : stored?.altura || '',
+          objetivo: data.objetivo || stored?.objetivo || '',
+          nivel: data.nivel || stored?.nivel || '',
+        })
+      } catch {
+        if (!stored) {
+          setError('Não foi possível carregar todos os dados do perfil.')
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
   }, [router])
 
   async function handleLogout() {
@@ -91,8 +129,38 @@ export default function ProfileScreen() {
 
     setSaving(true)
     try {
-      const data = await updateProfile(payload)
-      setUser(data)
+      const updated: StoredUserProfile = {
+        id: user?.id ? String(user.id) : '',
+        nome: user?.nome || '',
+        email: user?.email || '',
+        idade: form.idade,
+        peso: form.peso,
+        altura: form.altura,
+        objetivo: form.objetivo,
+        nivel: form.nivel,
+      }
+
+      let saved = updated
+
+      try {
+        const data = await updateProfile(payload)
+        saved = {
+          id: String(data.id),
+          nome: data.nome || updated.nome,
+          email: data.email || updated.email,
+          idade: data.idade != null ? String(data.idade) : updated.idade,
+          peso: data.peso != null ? String(data.peso) : updated.peso,
+          altura: data.altura != null ? String(data.altura) : updated.altura,
+          objetivo: data.objetivo || updated.objetivo,
+          nivel: data.nivel || updated.nivel,
+        }
+      } catch {
+        // API indisponível: persiste localmente até o backend expor /users/me
+      }
+
+      applyProfile(saved)
+      await setUserProfile(saved)
+      await setUserLevel(levelToBackend[form.nivel] || form.nivel)
       setSuccess('Perfil atualizado com sucesso!')
     } catch (err: any) {
       setError(err.message || 'Erro ao atualizar perfil.')
@@ -110,7 +178,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.wrapper}>
+    <View style={styles.wrapper}>
       <View style={styles.header}>
         <Text style={styles.brand}>⚡ TreinAI</Text>
         <View style={styles.headerRight}>
@@ -119,7 +187,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.main}>
+      <ScrollView contentContainerStyle={[styles.main, { paddingBottom: 110 + insets.bottom, paddingTop: insets.top > 0 ? 0 : 12 }]}>
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.avatar}>
@@ -157,7 +225,8 @@ export default function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+      <BottomNav />
+    </View>
   )
 }
 

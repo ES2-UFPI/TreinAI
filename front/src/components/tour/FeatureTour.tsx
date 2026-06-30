@@ -106,7 +106,9 @@ export function TourProvider({ steps, children, onFinish }: TourProviderProps) {
     const ref = refs.current.get(step.id);
     if (!ref?.current) return;
 
-    ref.current.measure((_x, _y, width, height, pageX, pageY) => {
+    // measureInWindow usa coordenadas da viewport — necessário para o Modal
+    // (no web, measure/pageX/pageY pode divergir do zoom e do posicionamento fixo)
+    ref.current.measureInWindow((pageX, pageY, width, height) => {
       setRect({ x: pageX, y: pageY, width, height });
     });
   }, [steps]);
@@ -160,6 +162,15 @@ export function TourProvider({ steps, children, onFinish }: TourProviderProps) {
     return () => clearTimeout(t);
   }, [running, currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Re-mede ao redimensionar a janela (zoom do navegador, rotação, etc.)
+  useEffect(() => {
+    if (!running) return;
+    const sub = Dimensions.addEventListener("change", () => {
+      measureStep(currentIndex);
+    });
+    return () => sub.remove();
+  }, [running, currentIndex, measureStep]);
+
   const goNext = useCallback(() => {
     animateOut(() => {
       if (currentIndex < steps.length - 1) {
@@ -209,7 +220,9 @@ export function TourProvider({ steps, children, onFinish }: TourProviderProps) {
 
 const SPOTLIGHT_PAD = 8;
 const POPOVER_WIDTH = 280;
+const POPOVER_EST_HEIGHT = 260;
 const POPOVER_GAP = 12;
+const SCREEN_MARGIN = 16;
 
 interface OverlayProps {
   step: TourStep;
@@ -234,7 +247,16 @@ function TourOverlay({
   onPrev,
   onSkip,
 }: OverlayProps) {
-  const { width: SW, height: SH } = Dimensions.get("window");
+  const [windowSize, setWindowSize] = useState(() => Dimensions.get("window"));
+
+  useEffect(() => {
+    const sub = Dimensions.addEventListener("change", ({ window }) => {
+      setWindowSize(window);
+    });
+    return () => sub.remove();
+  }, []);
+
+  const { width: SW, height: SH } = windowSize;
   const isLast = stepIndex === totalSteps - 1;
   const isFirst = stepIndex === 0;
 
@@ -244,14 +266,24 @@ function TourOverlay({
   const slW = rect.width + SPOTLIGHT_PAD * 2;
   const slH = rect.height + SPOTLIGHT_PAD * 2;
 
-  // Popover position
-  const placement = step.placement ?? inferPlacement(rect, SH);
+  // Popover position (inverte o lado se não couber na viewport)
+  const placement = resolvePlacement(
+    step.placement ?? inferPlacement(rect, SH),
+    rect,
+    SW,
+    SH,
+    POPOVER_WIDTH,
+    POPOVER_EST_HEIGHT,
+    POPOVER_GAP,
+    SPOTLIGHT_PAD
+  );
   const popoverStyle = computePopoverPosition(
     placement,
     rect,
     SW,
     SH,
     POPOVER_WIDTH,
+    POPOVER_EST_HEIGHT,
     POPOVER_GAP,
     SPOTLIGHT_PAD
   );
@@ -312,6 +344,7 @@ function TourOverlay({
         style={[
           styles.popover,
           popoverStyle,
+          { maxHeight: SH - SCREEN_MARGIN * 2 },
           {
             opacity: fadeAnim,
             transform: [{ scale: popoverScale }],
@@ -367,60 +400,153 @@ function TourOverlay({
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function inferPlacement(
-  rect: ElementRect,
-  screenHeight: number
-): TourStep["placement"] {
-  // Se o elemento está na metade superior, popover vai embaixo; senão, em cima
+type Placement = NonNullable<TourStep["placement"]>;
+
+function inferPlacement(rect: ElementRect, screenHeight: number): Placement {
   return rect.y + rect.height / 2 < screenHeight / 2 ? "bottom" : "top";
 }
 
-function computePopoverPosition(
-  placement: TourStep["placement"],
+function placementFits(
+  placement: Placement,
   rect: ElementRect,
   sw: number,
   sh: number,
   popoverWidth: number,
+  popoverHeight: number,
+  gap: number,
+  pad: number
+): boolean {
+  const h = rect.height + pad * 2;
+  const slY = rect.y - pad;
+
+  switch (placement) {
+    case "top":
+      return slY >= popoverHeight + gap + SCREEN_MARGIN;
+    case "bottom":
+      return sh - (slY + h) >= popoverHeight + gap + SCREEN_MARGIN;
+    case "left":
+      return rect.x >= popoverWidth + gap + SCREEN_MARGIN;
+    case "right":
+      return sw - (rect.x + rect.width) >= popoverWidth + gap + SCREEN_MARGIN;
+  }
+}
+
+function resolvePlacement(
+  preferred: Placement,
+  rect: ElementRect,
+  sw: number,
+  sh: number,
+  popoverWidth: number,
+  popoverHeight: number,
+  gap: number,
+  pad: number
+): Placement {
+  if (placementFits(preferred, rect, sw, sh, popoverWidth, popoverHeight, gap, pad)) {
+    return preferred;
+  }
+
+  const opposites: Record<Placement, Placement> = {
+    top: "bottom",
+    bottom: "top",
+    left: "right",
+    right: "left",
+  };
+  const opposite = opposites[preferred];
+  if (placementFits(opposite, rect, sw, sh, popoverWidth, popoverHeight, gap, pad)) {
+    return opposite;
+  }
+
+  const candidates: Placement[] = ["bottom", "top", "right", "left"];
+  const best = candidates.reduce<{ placement: Placement; space: number }>(
+    (acc, candidate) => {
+      const h = rect.height + pad * 2;
+      const slY = rect.y - pad;
+      const space =
+        candidate === "top"
+          ? slY
+          : candidate === "bottom"
+            ? sh - (slY + h)
+            : candidate === "left"
+              ? rect.x
+              : sw - (rect.x + rect.width);
+      return space > acc.space ? { placement: candidate, space } : acc;
+    },
+    { placement: preferred, space: -1 }
+  );
+
+  return best.placement;
+}
+
+function computePopoverPosition(
+  placement: Placement,
+  rect: ElementRect,
+  sw: number,
+  sh: number,
+  popoverWidth: number,
+  popoverHeight: number,
   gap: number,
   pad: number
 ): object {
   const h = rect.height + pad * 2;
   const slY = rect.y - pad;
 
-  // Centraliza horizontalmente em relação ao elemento, mas nunca sai da tela
   let left = rect.x + rect.width / 2 - popoverWidth / 2;
-  left = Math.max(16, Math.min(left, sw - popoverWidth - 16));
+  left = Math.max(SCREEN_MARGIN, Math.min(left, sw - popoverWidth - SCREEN_MARGIN));
 
   switch (placement) {
-    case "top":
+    case "top": {
+      let bottom = sh - slY + gap;
+      bottom = Math.max(
+        SCREEN_MARGIN,
+        Math.min(bottom, sh - popoverHeight - SCREEN_MARGIN)
+      );
       return {
         position: "absolute" as const,
-        bottom: sh - slY + gap,
+        bottom,
         left,
         width: popoverWidth,
       };
-    case "left":
+    }
+    case "left": {
+      let top = rect.y + rect.height / 2 - popoverHeight / 2;
+      top = Math.max(
+        SCREEN_MARGIN,
+        Math.min(top, sh - popoverHeight - SCREEN_MARGIN)
+      );
       return {
         position: "absolute" as const,
-        top: rect.y,
+        top,
         right: sw - rect.x + gap,
         width: popoverWidth,
       };
-    case "right":
+    }
+    case "right": {
+      let top = rect.y + rect.height / 2 - popoverHeight / 2;
+      top = Math.max(
+        SCREEN_MARGIN,
+        Math.min(top, sh - popoverHeight - SCREEN_MARGIN)
+      );
       return {
         position: "absolute" as const,
-        top: rect.y,
+        top,
         left: rect.x + rect.width + gap,
         width: popoverWidth,
       };
+    }
     case "bottom":
-    default:
+    default: {
+      let top = slY + h + gap;
+      top = Math.max(
+        SCREEN_MARGIN,
+        Math.min(top, sh - popoverHeight - SCREEN_MARGIN)
+      );
       return {
         position: "absolute" as const,
-        top: slY + h + gap,
+        top,
         left,
         width: popoverWidth,
       };
+    }
   }
 }
 
