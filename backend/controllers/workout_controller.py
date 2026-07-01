@@ -3,7 +3,7 @@ from sqlmodel import Session
 
 from core.database import get_session
 from domain.user import UserNotFoundError
-from domain.user_workout import WorkoutHistoryItem
+from domain.user_workout import WorkoutNotFoundError, WorkoutHistoryItem
 from domain.workout_plan import WorkoutPlan, WorkoutRequest
 from repositories.user_repository import UserRepository
 from repositories.user_workout_repository import UserWorkoutRepository
@@ -19,10 +19,13 @@ router = APIRouter(prefix="/workouts", tags=["workouts"])
 def get_workout_service(session: Session = Depends(get_session)) -> WorkoutService:
     user_repository = UserRepository(session)
     user_workout_repository = UserWorkoutRepository(session)
-    rag_engine = RAGEngine(WorkoutRepository(session))
+    workout_repository = WorkoutRepository(session)
+    rag_engine = RAGEngine(workout_repository)
     llm_facade = LLMFacade(rag_engine)
 
-    return WorkoutService(user_repository, user_workout_repository, llm_facade)
+    return WorkoutService(
+        user_repository, user_workout_repository, workout_repository, llm_facade
+    )
 
 
 @router.get("/history", response_model=list[WorkoutHistoryItem])
@@ -50,4 +53,18 @@ def generate_workout(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(error),
+        )
+
+
+@router.get("/{workout_id}", response_model=WorkoutPlan)
+def get_workout_detail(
+    workout_id: int,
+    service: WorkoutService = Depends(get_workout_service),
+) -> WorkoutPlan:
+    try:
+        return service.get_workout_detail(workout_id)
+    except WorkoutNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Treino não encontrado",
         )
