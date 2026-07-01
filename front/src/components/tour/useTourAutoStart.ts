@@ -25,12 +25,17 @@ export function useTourAutoStart(delayMs = 600) {
     if (didCheck.current) return;
     didCheck.current = true;
 
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
     AsyncStorage.getItem(TOUR_KEY).then((seen) => {
       if (!seen) {
-        const t = setTimeout(() => startTour(), delayMs);
-        return () => clearTimeout(t);
+        timeoutId = setTimeout(() => startTour(), delayMs);
       }
     });
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 }
 

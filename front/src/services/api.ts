@@ -2,13 +2,15 @@ import { getToken } from '@/services/session'
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://127.0.0.1:8000'
 
-const levelToBackend: Record<string, string> = {
+export const levelToBackend: Record<string, string> = {
   iniciante: 'beginner',
   intermediario: 'intermediate',
   avancado: 'advanced',
 }
 
-const levelFromBackend: Record<string, string> = {
+// Exportado para uso fora deste arquivo (ex.: traduzir o nível salvo na
+// sessão para exibir no dashboard) sem duplicar o mapeamento.
+export const levelFromBackend: Record<string, string> = {
   beginner: 'iniciante',
   intermediate: 'intermediario',
   advanced: 'avancado',
