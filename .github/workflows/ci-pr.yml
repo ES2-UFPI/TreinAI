@@ -35,9 +35,8 @@ jobs:
       - name: Sintaxe check
         run: uv run python -m compileall -q .
 
-      # adicionar quando tiver teste
-      #- name: Rodar testes
-      #  run: uv run pytest --tb=short
+      - name: Rodar testes
+        run: uv run pytest --tb=short
 
   frontend:
     name: Frontend
@@ -64,3 +63,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Testes
+        run: npm test -- --ci
