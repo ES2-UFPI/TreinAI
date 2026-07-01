@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
 import WorkoutContent from "@/components/WorkoutContent";
 import { buscarDetalheTreino } from "@/services/api";
@@ -67,10 +68,17 @@ export default function WorkoutDetailScreen() {
       style={styles.scroll}
       contentContainerStyle={[
         styles.conteudo,
-        { paddingTop: insets.top + 20, paddingBottom: 40 + insets.bottom },
+        { paddingBottom: 40 + insets.bottom },
       ]}
       showsVerticalScrollIndicator={false}
     >
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={20} color={colors.accent} />
+          <Text style={styles.backText}>Histórico</Text>
+        </Pressable>
+      </View>
+
       <View style={styles.cabecalho}>
         <Text style={styles.titulo}>{plano.title}</Text>
         {!!plano.description && (
@@ -100,6 +108,25 @@ const styles = StyleSheet.create({
   conteudo: {
     paddingHorizontal: 20,
     gap: 20,
+  },
+  header: {
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingBottom: 12,
+    paddingHorizontal: 20,
+    marginHorizontal: -20,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+  },
+  backText: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: "600",
   },
   cabecalho: {
     gap: 8,

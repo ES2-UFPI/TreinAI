@@ -6,9 +6,9 @@ import type { Exercise, WorkoutDay, WorkoutPlan } from '@/domain/workout'
 export type { WorkoutPlan }
 
 const LEVEL_LABEL: Record<string, string> = {
-  beginner:     'Iniciante',
+  beginner: 'Iniciante',
   intermediate: 'Intermediário',
-  advanced:     'Avançado',
+  advanced: 'Avançado',
 }
 
 interface WorkoutContentProps {
@@ -61,15 +61,34 @@ function StatsGrid({ plan }: { plan: WorkoutPlan }) {
   )
 }
 
-function StatCard({ value, label, unit }: { value: string | number | null | undefined; label: string; unit?: string }) {
+function StatCard({
+  value,
+  label,
+  unit,
+}: {
+  value: string | number | null | undefined
+  label: string
+  unit?: string
+}) {
   if (value == null) return null
+
   return (
     <View style={styles.statCard}>
-      <Text style={styles.statValue}>
+      <Text
+        style={styles.statValue}
+        adjustsFontSizeToFit
+        minimumFontScale={0.4}
+      >
         {String(value)}
         {unit && <Text style={styles.statUnit}> {unit}</Text>}
       </Text>
-      <Text style={styles.statLabel}>{label.toUpperCase()}</Text>
+
+      <Text
+        style={styles.statLabel}
+        numberOfLines={2}
+      >
+        {label.toUpperCase()}
+      </Text>
     </View>
   )
 }
@@ -172,28 +191,35 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    minWidth: 88,
+    minWidth: 0,
     backgroundColor: colors.surface2,
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: radius + 4,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     paddingVertical: 16,
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
+
   statValue: {
     color: colors.accent,
     fontSize: 30,
     fontWeight: '700',
     lineHeight: 34,
+    width: '100%',
+    textAlign: 'center',
+    flexShrink: 1,
   },
+
   statUnit: {
     color: colors.accent,
     fontSize: 14,
     fontWeight: '500',
     opacity: 0.75,
   },
+
   statLabel: {
     color: colors.textDim,
     fontSize: 10,
