@@ -9,8 +9,8 @@ export const levelToBackend: Record<string, string> = {
   avancado: 'advanced',
 }
 
-// Exportado para uso fora deste arquivo (ex.: traduzir o nível salvo na
-// sessão para exibir no dashboard) sem duplicar o mapeamento.
+// Exportado para uso fora deste arquivo (ex.: traduzir o nivel salvo na
+// sessao para exibir no dashboard) sem duplicar o mapeamento.
 export const levelFromBackend: Record<string, string> = {
   beginner: 'iniciante',
   intermediate: 'intermediario',
@@ -63,14 +63,14 @@ async function request(path: string, options: RequestInit = {}) {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers as Record<string, string> || {}),
+      ...((options.headers as Record<string, string>) || {}),
     },
   })
 
   const data = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(data?.detail || 'Não foi possível concluir a solicitação.')
+    throw new Error(data?.detail || 'Nao foi possivel concluir a solicitacao.')
   }
 
   return data
@@ -117,4 +117,11 @@ export async function getWorkoutHistory(userId: number): Promise<WorkoutHistoryI
 
 export async function buscarDetalheTreino(id: number): Promise<WorkoutPlan> {
   return request(`/workouts/${id}`)
+}
+
+export async function generateWorkout(userId: number, query: string): Promise<WorkoutPlan> {
+  return request('/workouts/generate', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, query }),
+  })
 }

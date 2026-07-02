@@ -9,6 +9,13 @@ from domain.workout_plan import WorkoutPlan
 from services.rag_engine import RAGEngine
 from services.workout_factory import WorkoutFactory
 
+
+def _ollama_headers() -> dict[str, str]:
+    if not settings.OLLAMA_API_KEY:
+        return {}
+    return {"Authorization": f"Bearer {settings.OLLAMA_API_KEY}"}
+
+
 _EXERCISE_SCHEMA = {
     "type": "object",
     "properties": {
@@ -57,7 +64,7 @@ class LLMFacade:
         self._rag = rag_engine
         self._client = Client(
             host=settings.OLLAMA_HOST,
-            headers={"Authorization": f"Bearer {settings.OLLAMA_API_KEY}"},
+            headers=_ollama_headers(),
         )
 
     def generate_workout_plan(self, user_query: str, user: User) -> WorkoutPlan:
@@ -86,11 +93,11 @@ class LLMFacade:
             "Always answer in pt-BR, translate everything.\n\n"
             "STRICT RULES FOR THE days ARRAY:\n"
             "- Split the plan into one entry per training day. Each entry must have 'day' (integer), "
-            "'focus' (muscle group or session theme, e.g. 'Peito e Tríceps'), and 'exercises' (array).\n"
+            "'focus' (muscle group or session theme, e.g. 'Peito e Triceps'), and 'exercises' (array).\n"
             "- The number of day entries must equal days_per_week.\n"
             "- The 'reps' field must be compact: use only numbers or ranges (e.g. '12', '8-10'). "
             "For time-based exercises use 'Xs' for seconds or 'Xmin' for minutes (e.g. '30s', '2min'). "
-            "Never write out words like 'repetições', 'segundos', 'minutos'.\n\n"
+            "Never write out words like 'repeticoes', 'segundos', 'minutos'.\n\n"
             "Respond ONLY with a valid JSON object matching this schema (no markdown, no explanation):\n"
             f"{schema_str}"
         )
@@ -100,7 +107,7 @@ class LLMFacade:
             chunks = []
             for part in self._client.chat(model=settings.LLM_MODEL, messages=[{"role": "user", "content": prompt}], format="json", stream=True):
                 chunks.append(part.message.content)
-                
+
             content = "".join(chunks)
             match = re.search(r"\{.*\}", content, re.DOTALL)
             if not match:

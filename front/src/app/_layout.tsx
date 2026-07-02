@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Stack, useRouter } from 'expo-router'
+import { Stack, usePathname, useRouter } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { useFonts, Exo_900Black } from '@expo-google-fonts/exo'
 import * as SplashScreen from 'expo-splash-screen'
@@ -8,16 +8,31 @@ import { getToken } from '@/services/session'
 
 SplashScreen.preventAutoHideAsync()
 
+const AUTH_ROUTES = ['/login', '/register']
+
 export default function RootLayout() {
   const router = useRouter()
+  const pathname = usePathname()
   const [fontsLoaded] = useFonts({ Exo_900Black })
 
   useEffect(() => {
     if (!fontsLoaded) return
+
     getToken()
-      .then((token) => router.replace(token ? '/' : '/login'))
+      .then((token) => {
+        const isAuthRoute = AUTH_ROUTES.includes(pathname)
+
+        if (!token && !isAuthRoute) {
+          router.replace('/login')
+          return
+        }
+
+        if (token && isAuthRoute) {
+          router.replace('/')
+        }
+      })
       .finally(() => SplashScreen.hideAsync())
-  }, [fontsLoaded, router])
+  }, [fontsLoaded, pathname, router])
 
   return (
     <>

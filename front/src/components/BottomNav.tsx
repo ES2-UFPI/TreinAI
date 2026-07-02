@@ -67,7 +67,7 @@ export default function BottomNav({ tourRefs }: BottomNavProps) {
         const active =
           item.key === "dashboard"
             ? isDashboardPath(pathname)
-            : pathname === item.href;
+            : pathname === item.href || (item.key === "workouts" && pathname.startsWith("/workout/"));
         const ref = item.tourId ? tourRefs?.[item.tourId] : undefined;
 
         return (
@@ -135,3 +135,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
