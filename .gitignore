@@ -96,3 +96,15 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# Logs e Arquivos Temporários
+front/.npm-cache/
+front/dist-web/
+front/expo-server.log
+front/expo-server.err.log
+mobile/node_modules/
+mobile/.expo/
+mobile/.npm-cache/
+mobile/dist-web/
+front/.npm-cache/
+front/dist-web/
+*.log
