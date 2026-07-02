@@ -37,6 +37,8 @@ jobs:
 
       - name: Rodar testes
         run: uv run pytest --tb=short
+        env:
+          DATABASE_URL: "sqlite:///./test.db"
 
   frontend:
     name: Frontend

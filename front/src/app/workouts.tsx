@@ -4,17 +4,15 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BottomNav from "@/components/BottomNav";
-import WorkoutHistoryList, {
-  type WorkoutHistoryEntry,
-} from "@/components/WorkoutHistoryList";
-import { getWorkoutHistory } from "@/services/api";
+import WorkoutHistoryList from "@/components/WorkoutHistoryList";
+import { getWorkoutHistory, type WorkoutHistoryItem } from "@/services/api";
 import { getUserId } from "@/services/session";
 import { colors } from "@/styles/theme";
 
 export default function WorkoutsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [workouts, setWorkouts] = useState<WorkoutHistoryEntry[]>([]);
+  const [workouts, setWorkouts] = useState<WorkoutHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

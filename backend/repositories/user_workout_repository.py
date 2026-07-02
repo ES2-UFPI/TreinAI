@@ -1,3 +1,5 @@
+from typing import Optional
+
 from sqlmodel import Session, select
 
 from domain.user_workout import UserWorkout
@@ -20,3 +22,6 @@ class UserWorkoutRepository:
             .order_by(UserWorkout.created_at.desc())
         )
         return list(self.session.exec(statement).all())
+
+    def get_by_id(self, workout_id: int) -> Optional[UserWorkout]:
+        return self.session.get(UserWorkout, workout_id)

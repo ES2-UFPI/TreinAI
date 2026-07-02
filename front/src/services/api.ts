@@ -1,4 +1,5 @@
 import { getToken } from '@/services/session'
+import type { WorkoutPlan } from '@/domain/workout'
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://127.0.0.1:8000'
 
@@ -112,4 +113,8 @@ export type WorkoutHistoryItem = {
 
 export async function getWorkoutHistory(userId: number): Promise<WorkoutHistoryItem[]> {
   return request(`/workouts/history?user_id=${userId}`)
+}
+
+export async function buscarDetalheTreino(id: number): Promise<WorkoutPlan> {
+  return request(`/workouts/${id}`)
 }
