@@ -1,8 +1,10 @@
 from sqlmodel import SQLModel
+from domain.exercise import Modality
 
 class WorkoutRequest(SQLModel):
     user_id: int
     query: str
+    modality: Modality | None = None
 
 
 class PlannedExercise(SQLModel):

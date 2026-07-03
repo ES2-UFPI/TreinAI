@@ -3,6 +3,7 @@ import re
 
 from ollama import Client
 
+from domain.exercise import Modality
 from core.config import settings
 from domain.user import User
 from domain.workout_plan import WorkoutPlan
@@ -67,20 +68,26 @@ class LLMFacade:
             headers=_ollama_headers(),
         )
 
-    def generate_workout_plan(self, user_query: str, user: User) -> WorkoutPlan:
+    def generate_workout_plan(self, user_query: str, user: User, modality: Modality | None = None) -> WorkoutPlan:
         context = self._rag.retrieve_context(self._build_rag_query(query=user_query))
-        prompt = self._build_prompt(user_query, user, context)
+        prompt = self._build_prompt(user_query, user, context, modality)
         data = self._call_llm_json(prompt)
         return WorkoutFactory.from_llm_response(data)
 
     def _build_rag_query(self, query: str) -> str:
         return f"{query} workout"
 
-    def _build_prompt(self, user_query: str, user: User, context: str | None) -> str:
+    def _build_prompt(self, user_query: str, user: User, context: str | None, modality: Modality | None = None) -> str:
+        modality_instruction = ""
+        if modality == Modality.bodyweight:
+            modality_instruction = "IMPORTANTE: use apenas exercícios com peso corporal, sem nenhum equipamento.\n"
+        elif modality == Modality.equipment:
+            modality_instruction = "IMPORTANTE: priorize exercícios que utilizem equipamentos (halteres, barras, máquinas).\n"
         schema_str = json.dumps(_RESPONSE_SCHEMA, indent=2)
         return (
             "You are an expert personal trainer. Create a personalized workout plan.\n\n"
             "User profile:\n"
+            f"{modality_instruction}"
             f"- Name: {user.name}\n"
             f"- Age: {user.age} | Weight: {user.weight}kg | Height: {user.height}cm\n"
             f"- Global Goal: {user.goal}\n"
