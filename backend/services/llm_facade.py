@@ -59,6 +59,10 @@ _RESPONSE_SCHEMA = {
     "required": ["title", "main_goal", "workout_type", "training_level", "days"],
 }
 
+_MODALITY_INSTRUCTIONS = {
+    Modality.bodyweight: "IMPORTANTE: use apenas exercícios com peso corporal, sem nenhum equipamento.\n",
+    Modality.equipment: "IMPORTANTE: priorize exercícios que utilizem equipamentos (halteres, barras, máquinas).\n",
+}
 
 class LLMFacade:
     def __init__(self, rag_engine: RAGEngine) -> None:
@@ -77,8 +81,11 @@ class LLMFacade:
     def _build_rag_query(self, query: str) -> str:
         return f"{query} workout"
 
+    def _build_modality_instruction(self, modality: Modality | None) -> str:
+        return _MODALITY_INSTRUCTIONS.get(modality, "")
+
     def _build_prompt(self, user_query: str, user: User, context: str | None, modality: Modality | None = None) -> str:
-        modality_instruction = ""
+        modality_instruction = self._build_modality_instruction(modality)
         if modality == Modality.bodyweight:
             modality_instruction = "IMPORTANTE: use apenas exercícios com peso corporal, sem nenhum equipamento.\n"
         elif modality == Modality.equipment:
@@ -86,8 +93,8 @@ class LLMFacade:
         schema_str = json.dumps(_RESPONSE_SCHEMA, indent=2)
         return (
             "You are an expert personal trainer. Create a personalized workout plan.\n\n"
-            "User profile:\n"
             f"{modality_instruction}"
+            "User profile:\n"
             f"- Name: {user.name}\n"
             f"- Age: {user.age} | Weight: {user.weight}kg | Height: {user.height}cm\n"
             f"- Global Goal: {user.goal}\n"
