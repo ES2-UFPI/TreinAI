@@ -37,6 +37,14 @@ export default function WorkoutsScreen() {
     load();
   }, []);
 
+  function openWorkout(id: number) {
+    const selected = workouts.find((workout) => workout.id === id);
+    router.push({
+      pathname: "/workout/[id]",
+      params: { id: String(id), title: selected?.title || "" },
+    });
+  }
+
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -56,7 +64,7 @@ export default function WorkoutsScreen() {
         <WorkoutHistoryList
           workouts={workouts}
           loading={loading}
-          onItemPress={(id) => router.push(`/workout/${id}`)}
+          onItemPress={openWorkout}
         />
       </ScrollView>
 

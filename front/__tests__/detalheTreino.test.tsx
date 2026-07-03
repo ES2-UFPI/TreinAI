@@ -13,6 +13,7 @@ jest.mock("@/services/api", () => ({
 jest.mock("expo-router", () => ({
   useLocalSearchParams: () => mockUseLocalSearchParams(),
   useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
+  usePathname: () => '/workout/1',
 }));
 
 jest.mock("react-native-safe-area-context", () => ({
