@@ -1,3 +1,4 @@
+from domain.exercise import Modality
 from domain.user import UserNotFoundError
 from domain.user_workout import WorkoutNotFoundError, UserWorkout, WorkoutHistoryItem
 from domain.workout import Workout
@@ -22,12 +23,12 @@ class WorkoutService:
         self._workout_repo = workout_repository
         self._facade = llm_facade
 
-    def generate(self, user_id: int, query: str) -> WorkoutPlan:
+    def generate(self, user_id: int, query: str, modality: "Modality | None" = None) -> WorkoutPlan:
         user = self._user_repo.get_by_id(user_id)
         if not user:
             raise UserNotFoundError()
 
-        plan = self._facade.generate_workout_plan(user_query=query, user=user)
+        plan = self._facade.generate_workout_plan(user_query=query, user=user, modality=modality)
 
         workout = Workout(
             title=plan.title,

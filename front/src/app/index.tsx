@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Alert from "@/components/Alert";
 import BottomNav from "@/components/BottomNav";
 import WorkoutModal from "@/components/WorkoutModal";
-import type { WorkoutPlan } from "@/domain/workout";
+import type { Modality, WorkoutPlan } from "@/domain/workout";
 import {
   TourProvider,
   useTour,
@@ -28,6 +28,7 @@ import {
 import { generateWorkout } from "@/services/api";
 import { getUserId, getUserName } from "@/services/session";
 import { colors, radius } from "@/styles/theme";
+import OptionSelect from "@/components/OptionSelect";
 
 export default function DashboardScreen() {
   return (
@@ -53,6 +54,7 @@ function DashboardContent() {
 
   const [userName, setUserName] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [modality, setModality] = useState<Modality | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [plan, setPlan] = useState<WorkoutPlan | null>(null);
@@ -88,7 +90,7 @@ function DashboardContent() {
 
     setLoading(true);
     try {
-      const generated = await generateWorkout(Number(userId), prompt.trim());
+      const generated = await generateWorkout(Number(userId), prompt.trim(), modality || undefined,);
       setPlan(generated);
     } catch (err: any) {
       setError(err.message || "Nao foi possivel gerar o treino agora.");
@@ -138,6 +140,17 @@ function DashboardContent() {
             placeholderTextColor={colors.textDim}
             style={styles.promptInput}
             textAlignVertical="top"
+          />
+
+          <OptionSelect
+            label="Modalidade"
+            options={[
+              { label: "Tanto faz", value: "" },
+              { label: "Sem equipamento", value: "bodyweight" },
+              { label: "Com equipamento", value: "equipment" },
+            ]}
+            value={modality}
+            onChange={(v) => setModality(v as Modality | "")}
           />
 
           <Pressable
@@ -196,8 +209,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: {
     padding: 20,
-    paddingTop: 28,
-    gap: 16,
+    paddingTop: 16,
+    gap: 10,
     alignItems: "center",
     flexGrow: 1,
   },
@@ -212,7 +225,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: "600",
     color: colors.text,
-    marginTop: 8,
+    marginTop: 4,
   },
   subtitle: {
     fontSize: 13,
@@ -229,16 +242,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.surface,
     borderRadius: 20,
-    paddingVertical: 30,
+    paddingVertical: 20,
     paddingHorizontal: 24,
-    gap: 14,
+    gap: 10,
     borderWidth: 1,
     borderColor: colors.border,
-    minHeight: 420,
+    minHeight: 360,
   },
   genIconWrap: {
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     borderRadius: 26,
     backgroundColor: colors.accent,
     alignItems: "center",
@@ -254,17 +267,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textDim,
     textAlign: "center",
-    lineHeight: 19,
+    lineHeight: 18,
     paddingHorizontal: 8,
   },
 
   promptInput: {
     width: "100%",
-    minHeight: 104,
+    minHeight: 84,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius,
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 14,
     backgroundColor: colors.surface2,
     color: colors.text,
@@ -276,7 +289,7 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: colors.accent,
     borderRadius: radius,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: "center",
     shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 6 },
@@ -303,7 +316,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   linkButtonPressed: {
     opacity: 0.75,

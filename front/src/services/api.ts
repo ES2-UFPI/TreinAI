@@ -1,5 +1,5 @@
 import { getToken } from '@/services/session'
-import type { WorkoutPlan } from '@/domain/workout'
+import type { Modality, WorkoutPlan } from '@/domain/workout'
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://127.0.0.1:8000'
 
@@ -119,9 +119,13 @@ export async function buscarDetalheTreino(id: number): Promise<WorkoutPlan> {
   return request(`/workouts/${id}`)
 }
 
-export async function generateWorkout(userId: number, query: string): Promise<WorkoutPlan> {
+export async function generateWorkout(userId: number, query: string, modality?: Modality,): Promise<WorkoutPlan> {
   return request('/workouts/generate', {
     method: 'POST',
-    body: JSON.stringify({ user_id: userId, query }),
+    body: JSON.stringify({
+      user_id: userId,
+      query,
+      ...(modality ? { modality } : {}),
+    }),
   })
 }

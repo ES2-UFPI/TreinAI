@@ -1,3 +1,5 @@
+export type Modality = 'bodyweight' | 'equipment'
+
 export interface Exercise {
   name: string
   sets: number
