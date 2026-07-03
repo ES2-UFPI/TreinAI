@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Alert from "@/components/Alert";
 import BottomNav from "@/components/BottomNav";
 import WorkoutModal from "@/components/WorkoutModal";
-import type { WorkoutPlan } from "@/domain/workout";
+import type { Modality, WorkoutPlan } from "@/domain/workout";
 import {
   TourProvider,
   useTour,
@@ -28,6 +28,7 @@ import {
 import { generateWorkout } from "@/services/api";
 import { getUserId, getUserName } from "@/services/session";
 import { colors, radius } from "@/styles/theme";
+import OptionSelect from "@/components/OptionSelect";
 
 export default function DashboardScreen() {
   return (
@@ -53,6 +54,7 @@ function DashboardContent() {
 
   const [userName, setUserName] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [modality, setModality] = useState<Modality | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [plan, setPlan] = useState<WorkoutPlan | null>(null);
@@ -88,7 +90,7 @@ function DashboardContent() {
 
     setLoading(true);
     try {
-      const generated = await generateWorkout(Number(userId), prompt.trim());
+      const generated = await generateWorkout(Number(userId), prompt.trim(), modality || undefined,);
       setPlan(generated);
     } catch (err: any) {
       setError(err.message || "Nao foi possivel gerar o treino agora.");
@@ -138,6 +140,17 @@ function DashboardContent() {
             placeholderTextColor={colors.textDim}
             style={styles.promptInput}
             textAlignVertical="top"
+          />
+
+          <OptionSelect
+            label="Modalidade"
+            options={[
+              { label: "Tanto faz", value: "" },
+              { label: "Sem equipamento", value: "bodyweight" },
+              { label: "Com equipamento", value: "equipment" },
+            ]}
+            value={modality}
+            onChange={(v) => setModality(v as Modality | "")}
           />
 
           <Pressable
