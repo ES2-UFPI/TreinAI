@@ -99,9 +99,32 @@ function DashboardContent() {
     }
   }
 
-  function goToWorkouts() {
+  function handleSave() {
     setPlan(null);
     router.push("/workouts");
+  }
+
+  async function handleRegenerate(feedback: string) {
+    setError("");
+
+    const userId = await getUserId();
+    if (!userId) {
+      router.replace("/login");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const enhancedPrompt = `${prompt.trim()}
+
+Feedback sobre o treino anterior: ${feedback}`;
+      const generated = await generateWorkout(Number(userId), enhancedPrompt, modality || undefined);
+      setPlan(generated);
+    } catch (err: any) {
+      setError(err.message || "Nao foi possivel gerar o treino agora.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -166,14 +189,6 @@ function DashboardContent() {
               {loading ? "Gerando..." : "Gerar treino"}
             </Text>
           </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [styles.linkButton, pressed && styles.linkButtonPressed]}
-            onPress={() => router.push("/workouts")}
-          >
-            <Ionicons name="clipboard-outline" size={17} color={colors.accent} />
-            <Text style={styles.linkButtonText}>Ver meus treinos</Text>
-          </Pressable>
         </View>
       </ScrollView>
 
@@ -181,7 +196,8 @@ function DashboardContent() {
         visible={!!plan}
         plan={plan || emptyPlan}
         onClose={() => setPlan(null)}
-        onSaveToHistory={goToWorkouts}
+        onSaveToHistory={handleSave}
+        onRegenerate={handleRegenerate}
       />
 
       <BottomNav

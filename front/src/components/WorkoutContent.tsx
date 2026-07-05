@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 
 import { colors, radius } from '@/styles/theme'
 import type { Exercise, WorkoutDay, WorkoutPlan } from '@/domain/workout'
@@ -124,32 +124,37 @@ function DaysList({ days }: { days: WorkoutDay[] }) {
 }
 
 function ExerciseCard({ exercise, index }: { exercise: Exercise; index: number }) {
+  const { width } = useWindowDimensions()
+  const isMobile = width < 480
+
   return (
     <View style={styles.exerciseCard}>
-      <View style={styles.exerciseIndex}>
-        <Text style={styles.exerciseIndexText}>{index + 1}</Text>
-      </View>
+      <View style={styles.exerciseHeader}>
+        <View style={styles.exerciseIndex}>
+          <Text style={styles.exerciseIndexText}>{index + 1}</Text>
+        </View>
 
-      <View style={styles.exerciseInfo}>
-        <Text style={styles.exerciseName}>{exercise.name}</Text>
-        {!!exercise.muscle_group && (
-          <Text style={styles.exerciseMuscle}>{exercise.muscle_group}</Text>
-        )}
+        <View style={styles.exerciseInfo}>
+          <Text style={styles.exerciseName} numberOfLines={2}>{exercise.name}</Text>
+          {!!exercise.muscle_group && (
+            <Text style={styles.exerciseMuscle} numberOfLines={1}>{exercise.muscle_group}</Text>
+          )}
+        </View>
       </View>
 
       <View style={styles.exerciseMetrics}>
-        <Metric value={exercise.sets} label="Séries" />
+        <Metric value={exercise.sets} label="Séries" isMobile={isMobile} />
         <Text style={styles.metricSeparator}>×</Text>
-        <Metric value={exercise.reps} label="Reps" />
+        <Metric value={exercise.reps} label="Reps" isMobile={isMobile} />
       </View>
     </View>
   )
 }
 
-function Metric({ value, label }: { value: string | number; label: string }) {
+function Metric({ value, label, isMobile }: { value: string | number; label: string; isMobile: boolean }) {
   return (
-    <View style={styles.metric}>
-      <Text style={styles.metricValue}>{String(value)}</Text>
+    <View style={[styles.metric, isMobile ? styles.metricMobile : styles.metricDesktop]}>
+      <Text style={styles.metricValue} numberOfLines={isMobile ? undefined : 1}>{String(value)}</Text>
       <Text style={styles.metricLabel}>{label}</Text>
     </View>
   )
@@ -267,19 +272,23 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   exerciseCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: colors.surface2,
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: radius + 4,
     padding: 14,
-    gap: 12,
+    gap: 10,
+    overflow: 'hidden',
+  },
+  exerciseHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
   },
   exerciseIndex: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
@@ -291,7 +300,9 @@ const styles = StyleSheet.create({
   },
   exerciseInfo: {
     flex: 1,
-    gap: 3,
+    minWidth: 0,
+    gap: 2,
+    marginTop: 2,
   },
   exerciseName: {
     color: colors.text,
@@ -304,29 +315,40 @@ const styles = StyleSheet.create({
   },
   exerciseMetrics: {
     flexDirection: 'row',
-    gap: 14,
+    alignItems: 'flex-end',
+    gap: 10,
+    flexWrap: 'wrap',
   },
   metric: {
-    alignItems: 'center',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  metricMobile: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     gap: 2,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  metricDesktop: {
+    flexShrink: 0,
   },
   metricValue: {
     color: colors.accent,
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
-    lineHeight: 20,
   },
   metricLabel: {
     color: colors.textDim,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '500',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   metricSeparator: {
     color: colors.textDim,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '300',
-    alignSelf: 'center',
-    marginBottom: 10,
+    marginHorizontal: 4,
   },
 })
