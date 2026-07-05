@@ -14,6 +14,12 @@ class UserWorkout(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC_M3).replace(tzinfo=None))
 
 
+class WorkoutSaveRequest(SQLModel):
+    user_id: int
+    workout_id: int
+    title: str
+
+
 class WorkoutHistoryItem(SQLModel):
     id: int
     title: str

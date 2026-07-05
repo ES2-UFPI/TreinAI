@@ -3,7 +3,7 @@ from sqlmodel import Session
 
 from core.database import get_session
 from domain.user import UserNotFoundError
-from domain.user_workout import WorkoutNotFoundError, WorkoutHistoryItem
+from domain.user_workout import WorkoutNotFoundError, WorkoutHistoryItem, UserWorkout, WorkoutSaveRequest
 from domain.workout_plan import WorkoutPlan, WorkoutRequest
 from repositories.user_repository import UserRepository
 from repositories.user_workout_repository import UserWorkoutRepository
@@ -54,6 +54,18 @@ def generate_workout(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(error),
         )
+
+
+@router.post("/save", status_code=status.HTTP_201_CREATED)
+def save_workout(
+    request: WorkoutSaveRequest,
+    session: Session = Depends(get_session),
+) -> dict:
+    user_workout_repo = UserWorkoutRepository(session)
+    user_workout_repo.save(
+        UserWorkout(user_id=request.user_id, workout_id=request.workout_id, title=request.title)
+    )
+    return {"ok": True}
 
 
 @router.get("/{workout_id}", response_model=WorkoutPlan)

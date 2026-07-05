@@ -25,7 +25,7 @@ import {
   markTourSeen,
   useTourAutoStart,
 } from "@/components/tour/useTourAutoStart";
-import { generateWorkout } from "@/services/api";
+import { generateWorkout, saveWorkoutToHistory } from "@/services/api";
 import { getUserId, getUserName } from "@/services/session";
 import { colors, radius } from "@/styles/theme";
 import OptionSelect from "@/components/OptionSelect";
@@ -99,7 +99,16 @@ function DashboardContent() {
     }
   }
 
-  function handleSave() {
+  async function handleSave(planToSave: WorkoutPlan) {
+    if (!planToSave.id) return;
+
+    const userId = await getUserId();
+    if (!userId) return;
+
+    try {
+      await saveWorkoutToHistory(Number(userId), planToSave.id, planToSave.title);
+    } catch {}
+
     setPlan(null);
     router.push("/workouts");
   }
