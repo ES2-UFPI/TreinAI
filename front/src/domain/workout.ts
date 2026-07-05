@@ -16,6 +16,7 @@ export interface WorkoutDay {
 }
 
 export interface WorkoutPlan {
+  id?: number
   title: string
   description?: string
   main_goal: string

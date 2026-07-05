@@ -119,6 +119,13 @@ export async function buscarDetalheTreino(id: number): Promise<WorkoutPlan> {
   return request(`/workouts/${id}`)
 }
 
+export async function saveWorkoutToHistory(userId: number, workoutId: number, title: string): Promise<void> {
+  await request('/workouts/save', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, workout_id: workoutId, title }),
+  })
+}
+
 export async function generateWorkout(userId: number, query: string, modality?: Modality,): Promise<WorkoutPlan> {
   return request('/workouts/generate', {
     method: 'POST',

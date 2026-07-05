@@ -1,6 +1,6 @@
 from domain.exercise import Modality
 from domain.user import UserNotFoundError
-from domain.user_workout import WorkoutNotFoundError, UserWorkout, WorkoutHistoryItem
+from domain.user_workout import WorkoutNotFoundError, WorkoutHistoryItem
 from domain.workout import Workout
 from domain.workout_exercise import WorkoutExercise
 from domain.workout_plan import PlannedExercise, WorkoutDay, WorkoutPlan
@@ -61,9 +61,7 @@ class WorkoutService:
                     )
                 )
 
-        self._user_workout_repo.save(
-            UserWorkout(user_id=user_id, workout_id=saved.id, title=plan.title)
-        )
+        plan.id = saved.id
         return plan
 
     def list_history(self, user_id: int) -> list[WorkoutHistoryItem]:

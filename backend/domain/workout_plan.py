@@ -24,6 +24,7 @@ class WorkoutDay(SQLModel):
 
 
 class WorkoutPlan(SQLModel):
+    id: int | None = None
     title: str
     description: str = ""
     main_goal: str

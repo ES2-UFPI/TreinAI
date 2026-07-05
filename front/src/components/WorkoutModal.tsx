@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
+  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -26,10 +27,23 @@ interface WorkoutModalProps {
 export default function WorkoutModal({ plan, visible, onClose, onSaveToHistory, onRegenerate }: WorkoutModalProps) {
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedback, setFeedback] = useState('')
+  const [loading, setLoading] = useState(false)
+  const planRef = useRef(plan)
+
+  useEffect(() => {
+    if (planRef.current !== plan) {
+      setLoading(false)
+      setShowFeedback(false)
+      setFeedback('')
+      planRef.current = plan
+    }
+  }, [plan])
 
   function handleClose() {
+    if (loading) return
     setShowFeedback(false)
     setFeedback('')
+    setLoading(false)
     onClose()
   }
 
@@ -37,13 +51,13 @@ export default function WorkoutModal({ plan, visible, onClose, onSaveToHistory, 
     onSaveToHistory?.(plan)
     setShowFeedback(false)
     setFeedback('')
+    setLoading(false)
   }
 
   function handleRegenerate() {
-    if (!feedback.trim()) return
+    if (!feedback.trim() || loading) return
+    setLoading(true)
     onRegenerate?.(feedback.trim())
-    setShowFeedback(false)
-    setFeedback('')
   }
 
   return (
@@ -64,9 +78,10 @@ export default function WorkoutModal({ plan, visible, onClose, onSaveToHistory, 
                 onFeedbackChange={setFeedback}
                 onBack={() => setShowFeedback(false)}
                 onRegenerate={handleRegenerate}
+                regenerating={loading}
               />
             ) : (
-              <ActionButtons onSave={handleSave} onModify={() => setShowFeedback(true)} />
+              <ActionButtons onSave={handleSave} onModify={() => setShowFeedback(true)} disabled={loading} />
             )}
           </ScrollView>
         </Pressable>
@@ -91,15 +106,17 @@ function Header({ plan, onClose }: { plan: WorkoutPlan; onClose: () => void }) {
   )
 }
 
-function ActionButtons({ onSave, onModify }: { onSave: () => void; onModify: () => void }) {
+function ActionButtons({ onSave, onModify, disabled }: { onSave: () => void; onModify: () => void; disabled?: boolean }) {
   return (
     <View style={styles.buttonRow}>
       <Pressable
         style={({ pressed }) => [
           styles.modifyBtn,
           pressed && styles.modifyBtnPressed,
+          disabled && styles.btnDisabled,
         ]}
         onPress={onModify}
+        disabled={disabled}
       >
         <Text style={styles.modifyBtnText} numberOfLines={1}>Modificar treino</Text>
       </Pressable>
@@ -122,11 +139,13 @@ function FeedbackSection({
   onFeedbackChange,
   onBack,
   onRegenerate,
+  regenerating,
 }: {
   feedback: string
   onFeedbackChange: (v: string) => void
   onBack: () => void
   onRegenerate: () => void
+  regenerating: boolean
 }) {
   return (
     <View style={styles.feedbackSection}>
@@ -144,31 +163,39 @@ function FeedbackSection({
         numberOfLines={4}
         textAlignVertical="top"
         style={styles.feedbackInput}
+        editable={!regenerating}
       />
 
-      <View style={styles.buttonRow}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.backBtn,
-            pressed && styles.backBtnPressed,
-          ]}
-          onPress={onBack}
-        >
-          <Text style={styles.backBtnText} numberOfLines={1}>Voltar</Text>
-        </Pressable>
+      {regenerating ? (
+        <View style={styles.regeneratingBox}>
+          <ActivityIndicator color={colors.accent} size="small" />
+          <Text style={styles.regeneratingText}>Gerando novo treino...</Text>
+        </View>
+      ) : (
+        <View style={styles.buttonRow}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.backBtn,
+              pressed && styles.backBtnPressed,
+            ]}
+            onPress={onBack}
+          >
+            <Text style={styles.backBtnText} numberOfLines={1}>Voltar</Text>
+          </Pressable>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.regenerateBtn,
-            pressed && styles.regenerateBtnPressed,
-            !feedback.trim() && styles.regenerateBtnDisabled,
-          ]}
-          onPress={onRegenerate}
-          disabled={!feedback.trim()}
-        >
-          <Text style={styles.regenerateBtnText} numberOfLines={1}>Gerar novo treino</Text>
-        </Pressable>
-      </View>
+          <Pressable
+            style={({ pressed }) => [
+              styles.regenerateBtn,
+              pressed && styles.regenerateBtnPressed,
+              !feedback.trim() && styles.regenerateBtnDisabled,
+            ]}
+            onPress={onRegenerate}
+            disabled={!feedback.trim()}
+          >
+            <Text style={styles.regenerateBtnText} numberOfLines={1}>Gerar novo treino</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   )
 }
@@ -349,5 +376,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+  },
+
+  btnDisabled: {
+    opacity: 0.4,
+  },
+  regeneratingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    backgroundColor: colors.surface2,
+    borderRadius: radius,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  regeneratingText: {
+    color: colors.textDim,
+    fontSize: 13,
+    fontWeight: '500',
   },
 })
