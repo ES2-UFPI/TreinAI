@@ -1,0 +1,61 @@
+name: Deploy Expo Web no GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'front/**'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./front
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: 'front/package-lock.json'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build do Expo Web
+        run: npx expo export -p web
+        env:
+          EXPO_BASE_URL: /TreinAI/
+
+      - name: Adicionar .nojekyll
+        run: touch dist/.nojekyll
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload do artefato
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: 'front/dist'
+
+      - name: Deploy para o GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
