@@ -103,7 +103,7 @@ export default function WorkoutDetailScreen() {
         </View>
 
         <View style={styles.contentCard}>
-          <WorkoutContent plan={plano} />
+          <WorkoutContent plan={plano} showLoadGuideButton />
         </View>
       </ScrollView>
 

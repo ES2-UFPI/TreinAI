@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
 
 import { colors, radius } from '@/styles/theme'
 import type { Exercise, WorkoutDay, WorkoutPlan } from '@/domain/workout'
@@ -13,14 +15,21 @@ const LEVEL_LABEL: Record<string, string> = {
 
 interface WorkoutContentProps {
   plan: WorkoutPlan
+  showLoadGuideButton?: boolean
 }
 
-export default function WorkoutContent({ plan }: WorkoutContentProps) {
+export default function WorkoutContent({ plan, showLoadGuideButton = false }: WorkoutContentProps) {
+  const router = useRouter()
+
   return (
     <>
       <Tags plan={plan} />
       <StatsGrid plan={plan} />
-      <DaysList days={plan.days} />
+      <DaysList
+        days={plan.days}
+        showLoadGuideButton={showLoadGuideButton}
+        onOpenLoadGuide={() => router.push('/load-guide')}
+      />
     </>
   )
 }
@@ -93,7 +102,15 @@ function StatCard({
   )
 }
 
-function DaysList({ days }: { days: WorkoutDay[] }) {
+function DaysList({
+  days,
+  showLoadGuideButton,
+  onOpenLoadGuide,
+}: {
+  days: WorkoutDay[]
+  showLoadGuideButton: boolean
+  onOpenLoadGuide: () => void
+}) {
   if (!days?.length) {
     return (
       <View style={styles.exercisesSection}>
@@ -114,7 +131,12 @@ function DaysList({ days }: { days: WorkoutDay[] }) {
           </View>
           <View style={styles.exercisesList}>
             {d.exercises.map((ex, i) => (
-              <ExerciseCard key={i} exercise={ex} index={i} />
+              <ExerciseCard
+                key={i}
+                exercise={ex}
+                index={i}
+                onOpenLoadGuide={showLoadGuideButton ? onOpenLoadGuide : undefined}
+              />
             ))}
           </View>
         </View>
@@ -123,7 +145,32 @@ function DaysList({ days }: { days: WorkoutDay[] }) {
   )
 }
 
-function ExerciseCard({ exercise, index }: { exercise: Exercise; index: number }) {
+function LoadGuideButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Carga"
+      style={({ pressed }) => [
+        styles.loadButton,
+        pressed && styles.loadButtonPressed,
+      ]}
+      onPress={onPress}
+    >
+      <Ionicons name="barbell-outline" size={17} color={colors.bg} />
+      <Text style={styles.loadButtonText} onPress={onPress}>Carga</Text>
+    </Pressable>
+  )
+}
+
+function ExerciseCard({
+  exercise,
+  index,
+  onOpenLoadGuide,
+}: {
+  exercise: Exercise
+  index: number
+  onOpenLoadGuide?: () => void
+}) {
   const { width } = useWindowDimensions()
   const isMobile = width < 480
 
@@ -142,10 +189,14 @@ function ExerciseCard({ exercise, index }: { exercise: Exercise; index: number }
         </View>
       </View>
 
-      <View style={styles.exerciseMetrics}>
-        <Metric value={exercise.sets} label="Séries" isMobile={isMobile} />
-        <Text style={styles.metricSeparator}>×</Text>
-        <Metric value={exercise.reps} label="Reps" isMobile={isMobile} />
+      <View style={styles.exerciseFooter}>
+        <View style={styles.exerciseMetrics}>
+          <Metric value={exercise.sets} label="Séries" isMobile={isMobile} />
+          <Text style={styles.metricSeparator}>×</Text>
+          <Metric value={exercise.reps} label="Reps" isMobile={isMobile} />
+        </View>
+
+        {!!onOpenLoadGuide && <LoadGuideButton onPress={onOpenLoadGuide} />}
       </View>
     </View>
   )
@@ -237,6 +288,30 @@ const styles = StyleSheet.create({
   exercisesSection: {
     gap: 20,
   },
+  loadButton: {
+    alignSelf: 'flex-end',
+    minHeight: 36,
+    borderRadius: radius,
+    backgroundColor: colors.accent,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexShrink: 0,
+  },
+  loadButtonPressed: {
+    backgroundColor: colors.accentHover,
+    transform: [{ translateY: -1 }],
+  },
+  loadButtonText: {
+    color: colors.bg,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+  },
   dayBlock: {
     gap: 10,
   },
@@ -318,6 +393,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 10,
     flexWrap: 'wrap',
+    flex: 1,
+    minWidth: 0,
+  },
+  exerciseFooter: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   metric: {
     flexDirection: 'row',
