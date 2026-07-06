@@ -14,5 +14,7 @@ class Settings(BaseSettings):
     EMBED_MODEL:  str = "qwen3-embedding:4b"
     EMBED_DIM: int = 768
 
+    CORS_ORIGINS: str = "*"
+
 
 settings = Settings()
