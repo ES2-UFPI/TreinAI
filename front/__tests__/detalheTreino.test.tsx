@@ -5,6 +5,7 @@ import type { WorkoutPlan } from "@/domain/workout";
 
 const mockBuscarDetalheTreino = jest.fn();
 const mockUseLocalSearchParams = jest.fn();
+const mockPush = jest.fn();
 
 jest.mock("@/services/api", () => ({
   buscarDetalheTreino: (...args: any[]) => mockBuscarDetalheTreino(...args),
@@ -12,7 +13,7 @@ jest.mock("@/services/api", () => ({
 
 jest.mock("expo-router", () => ({
   useLocalSearchParams: () => mockUseLocalSearchParams(),
-  useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
+  useRouter: () => ({ back: jest.fn(), push: mockPush }),
   usePathname: () => '/workout/1',
 }));
 
@@ -94,5 +95,20 @@ describe("Tela de detalhe do treino", () => {
     await render(<WorkoutDetailScreen />);
 
     expect(screen.getByTestId("loading")).toBeOnTheScreen();
+  });
+
+  it("deve abrir a tela de orientacao de carga ao tocar no botao Carga", async () => {
+    setup();
+    mockBuscarDetalheTreino.mockResolvedValue(planoMock);
+
+    await render(<WorkoutDetailScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Carga")).toBeOnTheScreen();
+    });
+
+    screen.getByText("Carga").props.onPress();
+
+    expect(mockPush).toHaveBeenCalledWith("/load-guide");
   });
 });
