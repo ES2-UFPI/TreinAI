@@ -1,5 +1,10 @@
+from typing import Optional
+
 from sqlalchemy import text
-from sqlmodel import Session
+from sqlmodel import Session, select
+
+from domain.workout import Workout
+from domain.workout_exercise import WorkoutExercise
 
 
 class WorkoutRepository:
@@ -22,3 +27,24 @@ class WorkoutRepository:
             sql, params={"vec": vector_literal, "n": n, "min_sim": min_similarity}
         ).all()
         return [(row[0], row[1]) for row in rows]
+
+    def save_workout(self, workout: Workout) -> Workout:
+        self.session.add(workout)
+        self.session.commit()
+        self.session.refresh(workout)
+        return workout
+
+    def get_workout_by_id(self, workout_id: int) -> Optional[Workout]:
+        return self.session.get(Workout, workout_id)
+
+    def save_exercise(self, exercise: WorkoutExercise) -> WorkoutExercise:
+        self.session.add(exercise)
+        self.session.commit()
+        self.session.refresh(exercise)
+        return exercise
+
+    def get_exercises_by_workout_id(self, workout_id: int) -> list[WorkoutExercise]:
+        statement = select(WorkoutExercise).where(
+            WorkoutExercise.workout_id == workout_id
+        ).order_by(WorkoutExercise.day, WorkoutExercise.order)
+        return list(self.session.exec(statement).all())

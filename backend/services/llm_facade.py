@@ -3,14 +3,32 @@ import re
 
 from ollama import Client
 
-from repositories.workout_repository import WorkoutRepository
-from core.database import get_session
+from domain.exercise import Modality
 from core.config import settings
 from domain.user import User
-from domain.workout import DifficultyLevel
 from domain.workout_plan import WorkoutPlan
 from services.rag_engine import RAGEngine
 from services.workout_factory import WorkoutFactory
+
+
+def _ollama_headers() -> dict[str, str]:
+    if not settings.OLLAMA_API_KEY:
+        return {}
+    return {"Authorization": f"Bearer {settings.OLLAMA_API_KEY}"}
+
+
+_EXERCISE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "name":         {"type": "string"},
+        "sets":         {"type": "integer"},
+        "reps":         {"type": "string"},
+        "rest_seconds": {"type": "integer"},
+        "muscle_group": {"type": "string"},
+        "notes":        {"type": "string"},
+    },
+    "required": ["name", "sets", "reps"],
+}
 
 _RESPONSE_SCHEMA = {
     "type": "object",
@@ -25,47 +43,82 @@ _RESPONSE_SCHEMA = {
         "time_per_workout":       {"type": "string"},
         "equipment_required":     {"type": "string"},
         "target_gender":          {"type": "string"},
-        "exercises": {
+        "days": {
             "type": "array",
             "items": {
                 "type": "object",
                 "properties": {
-                    "name":         {"type": "string"},
-                    "sets":         {"type": "integer"},
-                    "reps":         {"type": "string"},
-                    "rest_seconds": {"type": "integer"},
-                    "muscle_group": {"type": "string"},
-                    "notes":        {"type": "string"},
+                    "day":       {"type": "integer"},
+                    "focus":     {"type": "string"},
+                    "exercises": {"type": "array", "items": _EXERCISE_SCHEMA},
                 },
-                "required": ["name", "sets", "reps"],
+                "required": ["day", "focus", "exercises"],
             },
         },
     },
-    "required": ["title", "main_goal", "workout_type", "training_level", "exercises"],
+    "required": ["title", "main_goal", "workout_type", "training_level", "days"],
 }
 
+_MODALITY_INSTRUCTIONS = {
+    Modality.bodyweight: "IMPORTANTE: use apenas exercícios com peso corporal, sem nenhum equipamento.\n",
+    Modality.equipment: "IMPORTANTE: priorize exercícios que utilizem equipamentos (halteres, barras, máquinas).\n",
+}
 
 class LLMFacade:
     def __init__(self, rag_engine: RAGEngine) -> None:
         self._rag = rag_engine
         self._client = Client(
             host=settings.OLLAMA_HOST,
-            headers={"Authorization": f"Bearer {settings.OLLAMA_API_KEY}"},
+            headers=_ollama_headers(),
         )
 
-    def generate_workout_plan(self, user_query: str, user: User) -> WorkoutPlan:
+    def generate_workout_plan(
+        self,
+        user_query: str,
+        user: User,
+        modality: Modality | None = None,
+        available_days: list[str] | None = None,
+    ) -> WorkoutPlan:
         context = self._rag.retrieve_context(self._build_rag_query(query=user_query))
-        prompt = self._build_prompt(user_query, user, context)
+        prompt = self._build_prompt(user_query, user, context, modality, available_days)
         data = self._call_llm_json(prompt)
         return WorkoutFactory.from_llm_response(data)
 
     def _build_rag_query(self, query: str) -> str:
         return f"{query} workout"
 
-    def _build_prompt(self, user_query: str, user: User, context: str | None) -> str:
+    def _build_modality_instruction(self, modality: Modality | None) -> str:
+        return _MODALITY_INSTRUCTIONS.get(modality, "")
+
+    def _build_available_days_instruction(self, available_days: list[str] | None) -> str:
+        if not available_days:
+            return ""
+
+        days = ", ".join(available_days)
+        return (
+            f"Available training days: {days}\n"
+            f"IMPORTANT: days_per_week must be {len(available_days)} and the plan must only use these available days.\n"
+        )
+
+    def _build_prompt(
+        self,
+        user_query: str,
+        user: User,
+        context: str | None,
+        modality: Modality | None = None,
+        available_days: list[str] | None = None,
+    ) -> str:
+        modality_instruction = self._build_modality_instruction(modality)
+        if modality == Modality.bodyweight:
+            modality_instruction = "IMPORTANTE: use apenas exercícios com peso corporal, sem nenhum equipamento.\n"
+        elif modality == Modality.equipment:
+            modality_instruction = "IMPORTANTE: priorize exercícios que utilizem equipamentos (halteres, barras, máquinas).\n"
         schema_str = json.dumps(_RESPONSE_SCHEMA, indent=2)
+        available_days_instruction = self._build_available_days_instruction(available_days)
         return (
             "You are an expert personal trainer. Create a personalized workout plan.\n\n"
+            f"{modality_instruction}"
+            f"{available_days_instruction}"
             "User profile:\n"
             f"- Name: {user.name}\n"
             f"- Age: {user.age} | Weight: {user.weight}kg | Height: {user.height}cm\n"
@@ -77,6 +130,13 @@ class LLMFacade:
             "Based on the user profile and reference workouts, create a tailored workout plan. "
             "Adapt intensity and exercises to the user's level and goal. "
             "Always answer in pt-BR, translate everything.\n\n"
+            "STRICT RULES FOR THE days ARRAY:\n"
+            "- Split the plan into one entry per training day. Each entry must have 'day' (integer), "
+            "'focus' (muscle group or session theme, e.g. 'Peito e Triceps'), and 'exercises' (array).\n"
+            "- The number of day entries must equal days_per_week.\n"
+            "- The 'reps' field must be compact: use only numbers or ranges (e.g. '12', '8-10'). "
+            "For time-based exercises use 'Xs' for seconds or 'Xmin' for minutes (e.g. '30s', '2min'). "
+            "Never write out words like 'repeticoes', 'segundos', 'minutos'.\n\n"
             "Respond ONLY with a valid JSON object matching this schema (no markdown, no explanation):\n"
             f"{schema_str}"
         )
@@ -86,7 +146,7 @@ class LLMFacade:
             chunks = []
             for part in self._client.chat(model=settings.LLM_MODEL, messages=[{"role": "user", "content": prompt}], format="json", stream=True):
                 chunks.append(part.message.content)
-                
+
             content = "".join(chunks)
             match = re.search(r"\{.*\}", content, re.DOTALL)
             if not match:

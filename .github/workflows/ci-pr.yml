@@ -26,15 +26,19 @@ jobs:
         with:
           python-version-file: backend/.python-version
 
+      - name: Instalar dependências do sistema
+        run: sudo apt-get update && sudo apt-get install -y libxml2-dev libxslt1-dev
+
       - name: Instalar dependencias
         run: uv sync --frozen
 
       - name: Sintaxe check
         run: uv run python -m compileall -q .
 
-      # adicionar quando tiver teste
-      #- name: Rodar testes
-      #  run: uv run pytest --tb=short
+      - name: Rodar testes
+        run: uv run pytest --tb=short
+        env:
+          DATABASE_URL: "sqlite:///./test.db"
 
   frontend:
     name: Frontend
@@ -61,3 +65,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Testes
+        run: npm test -- --ci

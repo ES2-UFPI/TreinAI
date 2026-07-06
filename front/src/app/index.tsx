@@ -1,12 +1,21 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
+import Alert from "@/components/Alert";
+import BottomNav from "@/components/BottomNav";
+import WorkoutModal from "@/components/WorkoutModal";
+import type { Modality, WorkoutPlan } from "@/domain/workout";
+import type { TrainingDayValue } from "@/domain/trainingDays";
 import {
   TourProvider,
   useTour,
@@ -15,9 +24,13 @@ import {
 import { TREINAI_TOUR_STEPS } from "@/components/tour/tourSteps";
 import {
   markTourSeen,
-  resetTourSeen,
   useTourAutoStart,
 } from "@/components/tour/useTourAutoStart";
+import { generateWorkout, saveWorkoutToHistory } from "@/services/api";
+import { getUserId, getUserName } from "@/services/session";
+import { colors, radius } from "@/styles/theme";
+import OptionSelect from "@/components/OptionSelect";
+import TrainingDaySelector from "@/components/TrainingDaySelector";
 
 export default function DashboardScreen() {
   return (
@@ -29,177 +42,334 @@ export default function DashboardScreen() {
 
 function DashboardContent() {
   useTourAutoStart(600);
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { startTour: startTourParam } = useLocalSearchParams<{
+    startTour?: string;
+  }>();
+  const { startTour } = useTour();
 
   const refGen = useTourRef("gen-workout");
   const refWorkouts = useTourRef("nav-workouts");
-  const refExercises = useTourRef("nav-exercises");
-  const refStats = useTourRef("stats-panel");
-  const refHistory = useTourRef("workout-history");
+  const refProfile = useTourRef("nav-profile");
   const refHelp = useTourRef("nav-help");
 
-  const { startTour } = useTour();
+  const [userName, setUserName] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [modality, setModality] = useState<Modality | "">("");
+  const [availableDays, setAvailableDays] = useState<TrainingDayValue[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [plan, setPlan] = useState<WorkoutPlan | null>(null);
+
+  useEffect(() => {
+    getUserName().then((name) => {
+      if (name) setUserName(name);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (startTourParam !== "1") return;
+    const t = setTimeout(() => {
+      startTour();
+      router.setParams({ startTour: "" });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [startTourParam, startTour, router]);
+
+  async function handleGenerate() {
+    setError("");
+
+    if (!prompt.trim()) {
+      setError("Descreva seu objetivo para gerar um treino.");
+      return;
+    }
+
+    const userId = await getUserId();
+    if (!userId) {
+      router.replace("/login");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const generated = await generateWorkout(
+        Number(userId),
+        prompt.trim(),
+        modality || undefined,
+        availableDays.length ? availableDays : undefined,
+      );
+      setPlan(generated);
+    } catch (err: any) {
+      setError(err.message || "Nao foi possivel gerar o treino agora.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave(planToSave: WorkoutPlan) {
+    if (!planToSave.id) return;
+
+    const userId = await getUserId();
+    if (!userId) return;
+
+    try {
+      await saveWorkoutToHistory(Number(userId), planToSave.id, planToSave.title);
+    } catch {}
+
+    setPlan(null);
+    router.push("/workouts");
+  }
+
+  async function handleRegenerate(feedback: string) {
+    setError("");
+
+    const userId = await getUserId();
+    if (!userId) {
+      router.replace("/login");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const enhancedPrompt = `${prompt.trim()}
+
+Feedback sobre o treino anterior: ${feedback}`;
+      const generated = await generateWorkout(
+        Number(userId),
+        enhancedPrompt,
+        modality || undefined,
+        availableDays.length ? availableDays : undefined,
+      );
+      setPlan(generated);
+    } catch (err: any) {
+      setError(err.message || "Nao foi possivel gerar o treino agora.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.greeting}>Olá, João 👋</Text>
-      <Text style={styles.subtitle}>Pronto para treinar hoje?</Text>
-
-      <View ref={refGen} style={styles.card}>
-        <Text style={styles.cardTitle}>Gerar treino com IA</Text>
-        <View style={styles.inputMock}>
-          <Text style={styles.inputText}>
-            Ex: "Quero emagrecer, treino em casa, 3x por semana"
-          </Text>
-        </View>
-        <Pressable style={styles.btnGreen}>
-          <Text style={styles.btnGreenText}>Gerar treino</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.row}>
-        <View ref={refWorkouts} style={styles.navChip}>
-          <Text style={styles.navChipText}>📋 Meus treinos</Text>
-        </View>
-        <View ref={refExercises} style={styles.navChip}>
-          <Text style={styles.navChipText}>🏋️ Exercícios</Text>
-        </View>
-        <View ref={refHelp} style={styles.navChip}>
-          <Text style={styles.navChipText}>❓ Ajuda</Text>
-        </View>
-      </View>
-
-      <View ref={refStats} style={styles.statsRow}>
-        <StatCard value="3" label="Treinos gerados" />
-        <StatCard value="12" label="Dias ativos" />
-        <StatCard value="Interm." label="Seu nível" />
-      </View>
-
-      <View ref={refHistory} style={styles.card}>
-        <Text style={styles.cardTitle}>Últimos treinos</Text>
-        <HistoryItem icon="🏃" name="Treino HIIT – Segunda" />
-        <HistoryItem icon="🏋️" name="Força membros – Quarta" />
-      </View>
-
-      <Pressable
-        style={styles.btnOutline}
-        onPress={async () => {
-          await resetTourSeen();
-          startTour();
-        }}
+    <View style={styles.screen}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 110 + insets.bottom },
+        ]}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.btnOutlineText}>Ver tour novamente</Text>
-      </Pressable>
-    </ScrollView>
-  );
-}
+        <Text style={styles.brand}>TreinAI</Text>
+        <Text style={styles.greeting}>
+          Ola{userName ? `, ${userName.split(" ")[0]}` : ""} :)
+        </Text>
+        <Text style={styles.subtitle}>Pronto para treinar hoje?</Text>
 
-function StatCard({ value, label }: { value: string; label: string }) {
-  return (
-    <View style={styles.statCard}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+        <View ref={refGen} style={styles.genCard}>
+          <View style={styles.genIconWrap}>
+            <Ionicons name="sparkles" size={26} color={colors.bg} />
+          </View>
+          <Text style={styles.genTitle}>Gerar treino com IA</Text>
+          <Text style={styles.genHint}>
+            Descreva seu objetivo e a IA monta um plano completo para voce.
+          </Text>
+
+          <Alert type="error" message={error} />
+
+          <TextInput
+            value={prompt}
+            onChangeText={setPrompt}
+            editable={!loading}
+            multiline
+            placeholder={'Ex: "Quero emagrecer, treino em casa, 3x por semana"'}
+            placeholderTextColor={colors.textDim}
+            style={styles.promptInput}
+            textAlignVertical="top"
+          />
+
+          <OptionSelect
+            label="Modalidade"
+            options={[
+              { label: "Tanto faz", value: "" },
+              { label: "Sem equipamento", value: "bodyweight" },
+              { label: "Com equipamento", value: "equipment" },
+            ]}
+            value={modality}
+            onChange={(v) => setModality(v as Modality | "")}
+          />
+
+          <TrainingDaySelector
+            value={availableDays}
+            disabled={loading}
+            onChange={setAvailableDays}
+          />
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Gerar treino"
+            disabled={loading}
+            style={({ pressed }) => [
+              styles.btnGreen,
+              pressed && !loading && styles.btnGreenPressed,
+              loading && styles.btnDisabled,
+            ]}
+            onPress={handleGenerate}
+          >
+            <Text style={styles.btnGreenText}>
+              {loading ? "Gerando..." : "Gerar treino"}
+            </Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+
+      <WorkoutModal
+        visible={!!plan}
+        plan={plan || emptyPlan}
+        onClose={() => setPlan(null)}
+        onSaveToHistory={handleSave}
+        onRegenerate={handleRegenerate}
+      />
+
+      <BottomNav
+        tourRefs={{
+          "nav-workouts": refWorkouts,
+          "nav-profile": refProfile,
+          "nav-help": refHelp,
+        }}
+      />
     </View>
   );
 }
 
-function HistoryItem({ icon, name }: { icon: string; name: string }) {
-  return (
-    <View style={styles.historyItem}>
-      <Text style={styles.historyIcon}>{icon}</Text>
-      <Text style={styles.historyName}>{name}</Text>
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>Concluído</Text>
-      </View>
-    </View>
-  );
-}
-
-const GREEN = "#1D9E75";
+const emptyPlan: WorkoutPlan = {
+  title: "Treino",
+  description: "",
+  main_goal: "",
+  workout_type: "",
+  training_level: "",
+  days: [],
+};
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#f9f9f7" },
-  content: { padding: 20, gap: 14, paddingBottom: 40 },
-
-  greeting: { fontSize: 22, fontWeight: "600", color: "#111" },
-  subtitle: { fontSize: 14, color: "#888", marginTop: 2 },
-
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 16,
+  screen: { flex: 1, backgroundColor: colors.bg },
+  scroll: { flex: 1 },
+  content: {
+    padding: 20,
+    paddingTop: 16,
     gap: 10,
-    borderWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.08)",
-  },
-  cardTitle: { fontSize: 14, fontWeight: "600", color: "#222" },
-
-  inputMock: {
-    borderWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.15)",
-    borderRadius: 8,
-    padding: 10,
-    backgroundColor: "#f5f5f3",
-  },
-  inputText: { fontSize: 13, color: "#999" },
-
-  btnGreen: {
-    backgroundColor: GREEN,
-    borderRadius: 8,
-    paddingVertical: 10,
     alignItems: "center",
+    flexGrow: 1,
   },
-  btnGreenText: { color: "#fff", fontSize: 14, fontWeight: "600" },
 
-  row: { flexDirection: "row", gap: 10 },
-  navChip: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.08)",
+  brand: {
+    fontFamily: "Exo_900Black",
+    fontSize: 24,
+    letterSpacing: 2,
+    color: colors.accent,
   },
-  navChipText: { fontSize: 12, color: "#333", fontWeight: "500" },
-
-  statsRow: { flexDirection: "row", gap: 10 },
-  statCard: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    alignItems: "center",
-    borderWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.08)",
-  },
-  statValue: { fontSize: 18, fontWeight: "600", color: "#111" },
-  statLabel: { fontSize: 10, color: "#888", marginTop: 2, textAlign: "center" },
-
-  historyItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 6,
-    borderTopWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.06)",
-  },
-  historyIcon: { fontSize: 14 },
-  historyName: { flex: 1, fontSize: 13, color: "#444" },
-  badge: {
-    backgroundColor: "#E1F5EE",
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  badgeText: { fontSize: 10, color: GREEN, fontWeight: "600" },
-
-  btnOutline: {
-    borderWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.15)",
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: "center",
+  greeting: {
+    fontSize: 19,
+    fontWeight: "600",
+    color: colors.text,
     marginTop: 4,
   },
-  btnOutlineText: { fontSize: 13, color: "#777" },
+  subtitle: {
+    fontSize: 13,
+    color: colors.textDim,
+    marginBottom: 8,
+  },
+
+  genCard: {
+    width: "100%",
+    maxWidth: 480,
+    flexGrow: 1,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 360,
+  },
+  genIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 26,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  genTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.text,
+    textAlign: "center",
+  },
+  genHint: {
+    fontSize: 13,
+    color: colors.textDim,
+    textAlign: "center",
+    lineHeight: 18,
+    paddingHorizontal: 8,
+  },
+
+  promptInput: {
+    width: "100%",
+    minHeight: 84,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: colors.surface2,
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  btnGreen: {
+    width: "100%",
+    backgroundColor: colors.accent,
+    borderRadius: radius,
+    paddingVertical: 14,
+    alignItems: "center",
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 4,
+  },
+  btnGreenPressed: {
+    backgroundColor: colors.accentHover,
+    transform: [{ translateY: -1 }],
+  },
+  btnDisabled: {
+    opacity: 0.6,
+  },
+  btnGreenText: {
+    color: colors.bg,
+    fontSize: 14,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  linkButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 6,
+  },
+  linkButtonPressed: {
+    opacity: 0.75,
+  },
+  linkButtonText: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: "600",
+  },
 });
