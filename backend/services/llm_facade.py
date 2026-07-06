@@ -72,9 +72,15 @@ class LLMFacade:
             headers=_ollama_headers(),
         )
 
-    def generate_workout_plan(self, user_query: str, user: User, modality: Modality | None = None) -> WorkoutPlan:
+    def generate_workout_plan(
+        self,
+        user_query: str,
+        user: User,
+        modality: Modality | None = None,
+        available_days: list[str] | None = None,
+    ) -> WorkoutPlan:
         context = self._rag.retrieve_context(self._build_rag_query(query=user_query))
-        prompt = self._build_prompt(user_query, user, context, modality)
+        prompt = self._build_prompt(user_query, user, context, modality, available_days)
         data = self._call_llm_json(prompt)
         return WorkoutFactory.from_llm_response(data)
 
@@ -84,16 +90,35 @@ class LLMFacade:
     def _build_modality_instruction(self, modality: Modality | None) -> str:
         return _MODALITY_INSTRUCTIONS.get(modality, "")
 
-    def _build_prompt(self, user_query: str, user: User, context: str | None, modality: Modality | None = None) -> str:
+    def _build_available_days_instruction(self, available_days: list[str] | None) -> str:
+        if not available_days:
+            return ""
+
+        days = ", ".join(available_days)
+        return (
+            f"Available training days: {days}\n"
+            f"IMPORTANT: days_per_week must be {len(available_days)} and the plan must only use these available days.\n"
+        )
+
+    def _build_prompt(
+        self,
+        user_query: str,
+        user: User,
+        context: str | None,
+        modality: Modality | None = None,
+        available_days: list[str] | None = None,
+    ) -> str:
         modality_instruction = self._build_modality_instruction(modality)
         if modality == Modality.bodyweight:
             modality_instruction = "IMPORTANTE: use apenas exercícios com peso corporal, sem nenhum equipamento.\n"
         elif modality == Modality.equipment:
             modality_instruction = "IMPORTANTE: priorize exercícios que utilizem equipamentos (halteres, barras, máquinas).\n"
         schema_str = json.dumps(_RESPONSE_SCHEMA, indent=2)
+        available_days_instruction = self._build_available_days_instruction(available_days)
         return (
             "You are an expert personal trainer. Create a personalized workout plan.\n\n"
             f"{modality_instruction}"
+            f"{available_days_instruction}"
             "User profile:\n"
             f"- Name: {user.name}\n"
             f"- Age: {user.age} | Weight: {user.weight}kg | Height: {user.height}cm\n"

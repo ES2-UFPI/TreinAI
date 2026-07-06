@@ -15,6 +15,7 @@ import Alert from "@/components/Alert";
 import BottomNav from "@/components/BottomNav";
 import WorkoutModal from "@/components/WorkoutModal";
 import type { Modality, WorkoutPlan } from "@/domain/workout";
+import type { TrainingDayValue } from "@/domain/trainingDays";
 import {
   TourProvider,
   useTour,
@@ -29,6 +30,7 @@ import { generateWorkout, saveWorkoutToHistory } from "@/services/api";
 import { getUserId, getUserName } from "@/services/session";
 import { colors, radius } from "@/styles/theme";
 import OptionSelect from "@/components/OptionSelect";
+import TrainingDaySelector from "@/components/TrainingDaySelector";
 
 export default function DashboardScreen() {
   return (
@@ -55,6 +57,7 @@ function DashboardContent() {
   const [userName, setUserName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [modality, setModality] = useState<Modality | "">("");
+  const [availableDays, setAvailableDays] = useState<TrainingDayValue[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [plan, setPlan] = useState<WorkoutPlan | null>(null);
@@ -90,7 +93,12 @@ function DashboardContent() {
 
     setLoading(true);
     try {
-      const generated = await generateWorkout(Number(userId), prompt.trim(), modality || undefined,);
+      const generated = await generateWorkout(
+        Number(userId),
+        prompt.trim(),
+        modality || undefined,
+        availableDays.length ? availableDays : undefined,
+      );
       setPlan(generated);
     } catch (err: any) {
       setError(err.message || "Nao foi possivel gerar o treino agora.");
@@ -127,7 +135,12 @@ function DashboardContent() {
       const enhancedPrompt = `${prompt.trim()}
 
 Feedback sobre o treino anterior: ${feedback}`;
-      const generated = await generateWorkout(Number(userId), enhancedPrompt, modality || undefined);
+      const generated = await generateWorkout(
+        Number(userId),
+        enhancedPrompt,
+        modality || undefined,
+        availableDays.length ? availableDays : undefined,
+      );
       setPlan(generated);
     } catch (err: any) {
       setError(err.message || "Nao foi possivel gerar o treino agora.");
@@ -185,7 +198,15 @@ Feedback sobre o treino anterior: ${feedback}`;
             onChange={(v) => setModality(v as Modality | "")}
           />
 
+          <TrainingDaySelector
+            value={availableDays}
+            disabled={loading}
+            onChange={setAvailableDays}
+          />
+
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Gerar treino"
             disabled={loading}
             style={({ pressed }) => [
               styles.btnGreen,

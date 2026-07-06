@@ -5,6 +5,7 @@ class WorkoutRequest(SQLModel):
     user_id: int
     query: str
     modality: Modality | None = None
+    available_days: list[str] | None = None
 
 
 class PlannedExercise(SQLModel):

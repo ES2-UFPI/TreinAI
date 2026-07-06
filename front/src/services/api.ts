@@ -1,4 +1,5 @@
 import { getToken } from '@/services/session'
+import type { TrainingDayValue } from '@/domain/trainingDays'
 import type { Modality, WorkoutPlan } from '@/domain/workout'
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://127.0.0.1:8000'
@@ -126,13 +127,19 @@ export async function saveWorkoutToHistory(userId: number, workoutId: number, ti
   })
 }
 
-export async function generateWorkout(userId: number, query: string, modality?: Modality,): Promise<WorkoutPlan> {
+export async function generateWorkout(
+  userId: number,
+  query: string,
+  modality?: Modality,
+  availableDays?: TrainingDayValue[],
+): Promise<WorkoutPlan> {
   return request('/workouts/generate', {
     method: 'POST',
     body: JSON.stringify({
       user_id: userId,
       query,
       ...(modality ? { modality } : {}),
+      ...(availableDays?.length ? { available_days: availableDays } : {}),
     }),
   })
 }
