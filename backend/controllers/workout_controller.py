@@ -48,7 +48,12 @@ def generate_workout(
     service: WorkoutService = Depends(get_workout_service),
 ) -> WorkoutPlan:
     try:
-        return service.generate(request.user_id, request.query, modality=request.modality)
+        return service.generate(
+            request.user_id,
+            request.query,
+            modality=request.modality,
+            available_days=request.available_days,
+        )
     except UserNotFoundError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

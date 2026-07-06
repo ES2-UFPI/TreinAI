@@ -39,7 +39,9 @@ export default function OptionSelect({ label, options, value, onChange }: {
 
 const styles = StyleSheet.create({
   group: {
+    width: '100%',
     gap: 6,
+    alignItems: 'center',
   },
   label: {
     fontSize: 11,
@@ -47,10 +49,12 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1.1,
     color: colors.textDim,
+    textAlign: 'center',
   },
   options: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: 8,
   },
   option: {

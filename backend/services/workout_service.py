@@ -23,12 +23,23 @@ class WorkoutService:
         self._workout_repo = workout_repository
         self._facade = llm_facade
 
-    def generate(self, user_id: int, query: str, modality: "Modality | None" = None) -> WorkoutPlan:
+    def generate(
+        self,
+        user_id: int,
+        query: str,
+        modality: "Modality | None" = None,
+        available_days: list[str] | None = None,
+    ) -> WorkoutPlan:
         user = self._user_repo.get_by_id(user_id)
         if not user:
             raise UserNotFoundError()
 
-        plan = self._facade.generate_workout_plan(user_query=query, user=user, modality=modality)
+        plan = self._facade.generate_workout_plan(
+            user_query=query,
+            user=user,
+            modality=modality,
+            available_days=available_days,
+        )
 
         workout = Workout(
             title=plan.title,
