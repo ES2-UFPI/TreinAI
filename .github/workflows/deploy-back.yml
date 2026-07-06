@@ -1,0 +1,27 @@
+name: Deploy FastAPI no Railway
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v7
+
+      - name: Instalar Railway CLI
+        run: npm i -g @railway/cli
+
+      - name: Deploy para o Railway
+        run: railway up -s "${{ vars.RAILWAY_SERVICE }}" -d
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
